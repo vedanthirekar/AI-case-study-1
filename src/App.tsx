@@ -1,7 +1,7 @@
 // Routes and navigation. The app waits for the packet and the workpaper log,
 // then every screen reads from the same model and projection. Clients see only
 // their portal (DESIGN rule 8: whole areas that belong to another job may be hidden).
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import AppShell from './components/shell/AppShell'
 import KitGallery from './KitGallery'
@@ -18,6 +18,9 @@ import FirmPage from './pages/FirmPage'
 import { RoleSwitcher, SeasonClock, GlobalSearch, DemoMenu } from './features/shell/TopBar'
 import { NotificationBell } from './features/shell/Notifications'
 import { useFindings } from './features/findings'
+
+// The graph library is only downloaded when someone opens the lineage view.
+const LineagePage = lazy(() => import('./pages/LineagePage'))
 
 export default function App() {
   const status = useApp((s) => s.status)
@@ -52,6 +55,7 @@ function Ready() {
     { to: '/', label: 'Overview', icon: 'home', end: true },
     { to: '/review', label: 'Review inbox', icon: 'alert', count: open },
     { to: '/return', label: 'Return', icon: 'grid' },
+    { to: '/lineage', label: 'Lineage', icon: 'route' },
     { to: '/documents', label: 'Documents', icon: 'folder' },
     { to: '/areas', label: 'Areas', icon: 'book' },
     { to: '/changes', label: 'Changes', icon: 'history' },
@@ -67,6 +71,7 @@ function Ready() {
         <Route path="/" element={<Overview />} />
         <Route path="/review" element={<ReviewPage />} />
         <Route path="/return" element={<ReturnPage />} />
+        <Route path="/lineage" element={<Suspense fallback={<div className="p-6"><SkeletonRows rows={4} /></div>}><LineagePage /></Suspense>} />
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/documents/:id" element={<DocumentsPage />} />
         <Route path="/areas" element={<AreasPage />} />

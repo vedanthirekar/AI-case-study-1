@@ -21,7 +21,7 @@ export function RefChip({ id, compact = false, onOpenDoc, className = '' }: {
 
   const go = () => {
     if (r.ref.kind === 'line' && r.found) {
-      if (loc.pathname.startsWith('/return') || loc.pathname === '/review' || loc.pathname.startsWith('/areas')) open(r.ref.id)
+      if (/^\/(return|review|areas|changes|lineage)/.test(loc.pathname)) open(r.ref.id)
       else nav(`/return?trace=${encodeURIComponent(r.ref.id)}`)
       return
     }

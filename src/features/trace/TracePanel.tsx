@@ -2,7 +2,7 @@
 // field on the page), how it was verified, what changed, the discussion, and
 // what it relates to. Opens beside the content so numbers stay clickable.
 import { useMemo, useState, type ReactNode } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import Tabs from '../../components/Tabs'
 import StatusBadge from '../../components/StatusBadge'
 import { Icon, Money, Tag, Avatar, Card, cx } from '../../components/ui'
@@ -52,7 +52,7 @@ export default function TracePanel({ lineKey }: { lineKey: string }) {
   const verifs = d.verifications.get(lineKey) ?? []
 
   return (
-    <PanelShell onClose={close} title={line?.label ?? lineKey}
+    <PanelShell onClose={close} title={line?.label ?? lineKey} graphKey={line ? lineKey : undefined}
       sub={<><span className="font-mono">{lineKey}</span>{line && <> · {line.jurisdiction === 'federal' ? 'Federal' : 'California'} · {AREA_BY_ID.get(areaOf(lineKey))?.label}</>}</>}
       right={
         <div className="text-right">
@@ -87,7 +87,8 @@ export default function TracePanel({ lineKey }: { lineKey: string }) {
   )
 }
 
-function PanelShell({ title, sub, right, onClose, children }: { title: ReactNode; sub?: ReactNode; right?: ReactNode; onClose: () => void; children: ReactNode }) {
+function PanelShell({ title, sub, right, onClose, children, graphKey }: { title: ReactNode; sub?: ReactNode; right?: ReactNode; onClose: () => void; children: ReactNode; graphKey?: string }) {
+  const nav = useNavigate()
   return (
     <aside className="flex h-full w-[min(520px,46vw)] shrink-0 flex-col border-l border-line bg-surface">
       <div className="flex shrink-0 items-start gap-3 border-b border-line px-4 py-3">
@@ -97,6 +98,12 @@ function PanelShell({ title, sub, right, onClose, children }: { title: ReactNode
           {sub && <div className="mt-0.5 truncate text-micro text-muted">{sub}</div>}
         </div>
         {right}
+        {graphKey && (
+          <button onClick={() => nav(`/lineage?k=${encodeURIComponent(graphKey)}&trace=${encodeURIComponent(graphKey)}`)} title="See this number's lineage as a graph"
+            className="flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-micro font-semibold text-muted transition hover:border-accent hover:text-accent">
+            <Icon name="route" size={13} />Graph
+          </button>
+        )}
         <button onClick={onClose} aria-label="Close trace" className="text-faint transition hover:text-ink"><Icon name="x" size={16} /></button>
       </div>
       {children}
