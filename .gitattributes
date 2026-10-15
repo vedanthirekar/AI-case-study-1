@@ -1,0 +1,3 @@
+# Keep LF everywhere, and never touch the packet's bytes: it must load as delivered.
+* text=auto eol=lf
+public/okafor_lindqvist_2025_packet.json -text
