@@ -14,7 +14,15 @@ export type EventType =
   | 'signoff.given'
   | 'sensitive.revealed'
   | 'attachment.added'
+  | 'assignment.set'
+  | 'time.logged'
+  | 'standard.changed'
+  | 'filing.recorded'
   | 'event.reversed'
+
+export type FilingKind =
+  | 'extension' | 'client_approved' | 'submitted' | 'rejected' | 'accepted'
+  | 'frozen' | 'amendment_started' | 'notice_response'
 
 /** Rate categories from return_versions[].tax_effect_rates, plus payments and none. */
 export type EffectCategory =
@@ -47,7 +55,21 @@ export interface Payloads {
   'decision.recorded': { kind: 'judgment' | 'election' | 'due_diligence' | 'penalty'; topic: string; choice: string; authority: string; rationale?: string }
   'signoff.given': { scope: string; level: 'preparer' | 'reviewer' | 'partner'; hash: string; snapshot: Record<string, string | number> }
   'sensitive.revealed': { field: string; label: string }
-  'attachment.added': { name: string; size: number; mime: string; blobId: string }
+  'attachment.added': { name: string; size: number; mime: string; blobId: string; note?: string }
+  'assignment.set': { scope: string; assignee: string; due?: string; note?: string }
+  'time.logged': { area: string; hours: number; note?: string }
+  'standard.changed': { path: string; value: unknown; note?: string }
+  'filing.recorded': {
+    kind: FilingKind
+    jurisdiction?: 'federal' | 'california' | 'both'
+    detail?: string
+    amount?: number
+    /** fingerprint of the return this action covered (approval, filing, freeze) */
+    hash?: string
+    snapshot?: Record<string, string | number>
+    submissionId?: string
+    pin?: string
+  }
   'event.reversed': { eventId: string; reason?: string }
 }
 

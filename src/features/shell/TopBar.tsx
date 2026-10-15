@@ -11,6 +11,7 @@ import { fmtDate, fmtValue } from '../../lib/format'
 import { usePeople } from '../people'
 import { useFindings } from '../findings'
 import { useToast } from '../../components/Toast'
+import { seedEvents, SEED_SIM_NOW } from '../../lib/demo/seed'
 
 export function RoleSwitcher() {
   const actors = useApp((s) => s.actors)
@@ -123,9 +124,19 @@ export function GlobalSearch() {
 
 export function DemoMenu() {
   const resetDemo = useApp((s) => s.resetDemo)
+  const appendRaw = useApp((s) => s.appendRaw)
+  const setSimNow = useApp((s) => s.setSimNow)
+  const setActor = useApp((s) => s.setActor)
   const events = useApp((s) => s.events)
+  const m = useModel()
   const [confirm, setConfirm] = useState(false)
   const toast = useToast()
+  const loadDemo = async () => {
+    await resetDemo()
+    await appendRaw(seedEvents(m))
+    setSimNow(SEED_SIM_NOW); setActor('st-02')
+    toast({ title: 'Mid-season demo loaded', body: 'A week of review work. You are Daniel (reviewer) on June 26, 2026.' })
+  }
   return (
     <>
       <Menu align="right" width={260} trigger={(_open, toggle) => (
@@ -134,6 +145,7 @@ export function DemoMenu() {
         {(close) => (<>
           <MenuLabel>This browser's sandbox</MenuLabel>
           <div className="px-2.5 pb-2 text-micro text-muted">{events.length} entries in the workpaper log. Saved in this browser only.</div>
+          <MenuItem icon="play" onClick={() => { close(); void loadDemo() }}>Load mid-season demo</MenuItem>
           <MenuItem icon="refresh" danger onClick={() => { close(); setConfirm(true) }}>Reset to the raw packet</MenuItem>
         </>)}
       </Menu>

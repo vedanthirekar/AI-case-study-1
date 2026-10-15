@@ -19,6 +19,7 @@ import { ActionButton } from '../features/ActionButton'
 import { EffectLine } from '../features/trace/TracePanel'
 import DocumentViewer from '../features/documents/DocumentViewer'
 import { usePeople } from '../features/people'
+import { ThreadList, AskForm } from '../features/Threads'
 
 type StatusFilter = 'open' | 'all' | 'done'
 
@@ -32,7 +33,7 @@ export default function ReviewPage() {
   const findings = useFindings()
   const d = useDerived()
   const [params, setParams] = useSearchParams()
-  const [tab, setTab] = useState<'findings' | 'adjustments'>(params.get('tab') === 'adjustments' ? 'adjustments' : 'findings')
+  const [tab, setTab] = useState<'findings' | 'adjustments' | 'questions' | 'notes'>((params.get('tab') as 'adjustments') ?? 'findings')
   const [status, setStatus] = useState<StatusFilter>('open')
   const [area, setArea] = useState('all')
   const [sev, setSev] = useState('all')
@@ -80,7 +81,16 @@ export default function ReviewPage() {
           <Tabs value={tab} onChange={(k) => setTab(k as typeof tab)} items={[
             { key: 'findings', label: 'Findings', icon: 'alert', count: open.length, countTone: 'warn' },
             { key: 'adjustments', label: 'Adjustments to approve', icon: 'edit', count: pending.length },
+            { key: 'questions', label: 'Questions', icon: 'chat', count: d.threads.filter((t) => !t.answered).length, countTone: 'warn' },
+            { key: 'notes', label: 'Review notes', icon: 'note', count: d.notes.filter((n) => n.blocking && !n.resolved).length, countTone: 'warn' },
           ]} />
+          {tab === 'questions' && (
+            <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+              <ThreadList empty="No questions yet. Ask one from any line's trace (Notes tab) or here." />
+              <Card className="p-4"><div className="mb-2 font-display text-title font-bold">Ask a question</div><AskForm refs={[]} compact /></Card>
+            </div>
+          )}
+          {tab === 'notes' && <NotesList />}
 
           {tab === 'findings' && (
             <>
@@ -294,6 +304,26 @@ function AdjustmentQueue() {
           )
         })}
       </tbody>
+    </Table>
+  )
+}
+
+function NotesList() {
+  const d = useDerived()
+  const people = usePeople()
+  const nav = useNavigate()
+  const list = [...d.notes].sort((a, b) => Number(!!a.resolved) - Number(!!b.resolved) || Number(b.blocking) - Number(a.blocking))
+  if (!list.length) return <Card><div className="px-6 py-10 text-center text-body text-muted">No notes yet. Add one from any line's trace (Notes tab). Blocking review notes stop filing until resolved.</div></Card>
+  return (
+    <Table dense>
+      <thead><tr><Th>On</Th><Th>Note</Th><Th className="w-40">State</Th></tr></thead>
+      <tbody>{list.map((n) => (
+        <Tr key={n.id} onClick={() => n.refs[0] && nav(`/return?trace=${encodeURIComponent(n.refs[0])}`)}>
+          <Td mono>{n.refs[0]}</Td>
+          <Td><div className="text-ink">{n.text}</div><div className="text-micro text-muted">{people(n.by).name} · {fmtDateTime(n.at)}{n.resolved && ` · resolved by ${people(n.resolved.by).name}: ${n.resolved.resolution}`}</div></Td>
+          <Td>{n.resolved ? <StatusBadge vocab={FINDING_STATUS} value="resolved" /> : n.blocking ? <span className="text-micro font-semibold text-danger">Blocks filing</span> : <span className="text-micro text-muted">Open</span>}</Td>
+        </Tr>
+      ))}</tbody>
     </Table>
   )
 }

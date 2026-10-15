@@ -20,7 +20,7 @@ export function readiness(m: Model, d: Derived, findings: ReviewedFinding[], sim
   const dd = d.decisions.some((e) => e.payload.kind === 'due_diligence')
   const now = hashOf(scopeSnapshot(m, d, 'return'))
   const signed = (level: string) => d.signoffs.some((s) => s.scope === 'return' && s.level === level && s.hash === now)
-  const variance = varianceLines(m).filter((k) => !d.notes.some((n) => n.refs.includes(k)) && !d.verifications.has(k))
+  const variance = varianceLines(m, d.standards.variance_review).filter((k) => !d.notes.some((n) => n.refs.includes(k)) && !d.verifications.has(k))
 
   return [
     { name: 'Engagement letter and consents signed', done: has('engagement_letter') && has('consent_7216'), detail: 'D01 and D02 are signed.', href: '/documents/D01' },
@@ -34,14 +34,19 @@ export function readiness(m: Model, d: Derived, findings: ReviewedFinding[], sim
     { name: 'Diagnostics resolved', done: open.length === 0, detail: open.length ? `${open.length} findings still open.` : 'No open findings.', href: '/review' },
     { name: 'Reviewer sign-off', done: signed('reviewer'), detail: signed('reviewer') ? 'Signed and current.' : 'Not signed (or reopened by a change).' },
     { name: 'Partner sign-off', done: signed('partner'), detail: signed('partner') ? 'Signed and current.' : 'Not signed (or reopened by a change).' },
-    { name: 'Client approval and e-file authorization', done: false, detail: 'Form 8879 not yet signed.' },
+    {
+      name: 'Client approval and e-file authorization',
+      done: d.filing.clientApproval?.payload.hash === now,
+      detail: !d.filing.clientApproval ? 'Form 8879 not yet signed.' : d.filing.clientApproval.payload.hash === now ? 'Signed by the client for this exact return.' : 'Stale: the return changed after the client signed.',
+      href: '/filing',
+    },
   ]
 }
 
 /** Lines whose change from last year exceeds the firm's variance thresholds. */
-export function varianceLines(m: Model): string[] {
+export function varianceLines(m: Model, standard?: { flag_if_change_over_percent: number; and_over_amount: number }): string[] {
   const py = m.packet.prior_years.return_2024.lines
-  const std = m.packet.firm.starter_standards.variance_review
+  const std = standard ?? m.packet.firm.starter_standards.variance_review
   return Object.keys(py).filter((k) => {
     const l = m.current.lines.get(k)
     if (!l || typeof l.value !== 'number') return false

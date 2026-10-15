@@ -23,6 +23,8 @@ import { usePeople } from '../people'
 import { defaultBasis, CATEGORIES } from '../effectDefaults'
 import DocumentViewer from '../documents/DocumentViewer'
 import { useTrace } from './useTrace'
+import { ThreadList, AskForm } from '../Threads'
+import { Attachments } from '../Attachments'
 
 type Tab = 'built' | 'source' | 'review' | 'history' | 'notes' | 'related'
 
@@ -54,7 +56,7 @@ export default function TracePanel({ lineKey }: { lineKey: string }) {
       sub={<><span className="font-mono">{lineKey}</span>{line && <> · {line.jurisdiction === 'federal' ? 'Federal' : 'California'} · {AREA_BY_ID.get(areaOf(lineKey))?.label}</>}</>}
       right={
         <div className="text-right">
-          <div className="text-display font-semibold">{typeof ev.value === 'number' ? <Money value={ev.value} /> : <span className="text-lead">{fmtValue(ev.value)}</span>}</div>
+          <div className="text-display font-semibold">{typeof ev.value === 'number' && Number.isInteger(ev.value) && Math.abs(ev.value) >= 1 ? <Money value={ev.value} /> : <span className="tnum text-lead">{fmtValue(ev.value)}</span>}</div>
           {ev.adjusted && <div className="tnum text-micro text-faint line-through">{fmtValue(ev.original)}</div>}
           <div className="mt-1"><StatusBadge vocab={LINE_STATE} value={state} /></div>
         </div>
@@ -176,7 +178,7 @@ function TreeNode({ k, depth, seen, openEv }: { k: string; depth: number; seen: 
           <span className="block truncate text-meta text-ink hover:text-accent">{l.label}</span>
           <span className="font-mono text-micro text-faint">{k} · {l.rule}</span>
         </button>
-        <span className="tnum shrink-0 text-meta">{typeof ev.value === 'number' ? fmtNum(ev.value) : fmtValue(ev.value)}</span>
+        <span className="tnum shrink-0 text-meta">{fmtValue(ev.value)}</span>
       </div>
       {expanded && has && (
         <div className="pb-1">
@@ -260,7 +262,8 @@ function Review({ lineKey }: { lineKey: string }) {
   const m = useModel()
   const d = useDerived()
   const people = usePeople()
-  const types = m.packet.firm.starter_standards.verification_types
+  void m
+  const types = d.standards.verification_types
   const [method, setMethod] = useState(types[0])
   const [note, setNote] = useState('')
   const verifs = d.verifications.get(lineKey) ?? []
@@ -462,6 +465,13 @@ function Notes({ lineKey }: { lineKey: string }) {
           })}</ul>
         )}
       </Section>
+      <Section title="Evidence attached">
+        <Attachments refId={lineKey} />
+      </Section>
+      <Section title="Questions about this line">
+        <ThreadList filter={(t) => t.refs.includes(lineKey)} empty="No questions asked about this line." />
+        <div className="mt-2"><AskForm refs={[lineKey]} compact /></div>
+      </Section>
       <Section title="Add a note">
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} placeholder="Question, review comment or explanation"
           className="w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-body placeholder:text-faint" />
@@ -488,7 +498,7 @@ function Related({ lineKey }: { lineKey: string }) {
   const line = m.current.lines.get(lineKey)
   const py = m.packet.prior_years.return_2024
   const ly = py.lines[lineKey]
-  const std = m.packet.firm.starter_standards.variance_review
+  const std = useDerived().standards.variance_review
   const cur = line && typeof line.value === 'number' ? line.value : null
   const diff = ly != null && cur != null ? cur - ly : null
   const pctChange = diff != null && ly ? Math.abs(diff / ly) * 100 : null

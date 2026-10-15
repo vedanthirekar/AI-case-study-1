@@ -14,6 +14,7 @@ import { lineState } from '../features/lineStatus'
 import { LINE_STATE } from '../features/vocab'
 import { useTrace } from '../features/trace/useTrace'
 import TracePanel from '../features/trace/TracePanel'
+import SignoffBar from '../features/Signoffs'
 
 /** Forms with many detail lines show totals first; detail expands on request. */
 const DETAIL_FORMS = new Set(['F8949'])
@@ -100,6 +101,7 @@ export default function ReturnPage() {
             </div>
           </div>
           {legend && <div className="mt-3"><StatusLegend vocab={LINE_STATE} title="Line status" /></div>}
+          {!query && <div className="mt-3"><SignoffBar scope={area} label={AREAS.find((a) => a.id === area)?.label ?? area} /></div>}
 
           <Table dense className="mt-4">
             <thead><tr><Th className="w-28">Line</Th><Th>Description</Th><Th num className="w-28">2024</Th><Th num className="w-32">2025</Th><Th className="w-32">Status</Th></tr></thead>
@@ -126,7 +128,7 @@ export default function ReturnPage() {
                           <Td><span className="line-clamp-1">{l.label}</span></Td>
                           <Td num className="text-muted">{py[k] != null ? fmtNum(py[k]) : ''}</Td>
                           <Td num>
-                            <span className={cx(ev.adjusted && 'text-accent')}>{typeof ev.value === 'number' ? fmtNum(ev.value) : fmtValue(ev.value)}</span>
+                            <span className={cx(ev.adjusted && 'text-accent')}>{fmtValue(ev.value)}</span>
                             {ev.adjusted && <div className="text-micro text-faint line-through">{fmtValue(ev.original)}</div>}
                           </Td>
                           <Td><StatusBadge vocab={LINE_STATE} value={st} /></Td>

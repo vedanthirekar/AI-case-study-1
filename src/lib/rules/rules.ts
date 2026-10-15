@@ -24,14 +24,18 @@ export function actorsOf(m: Model): Actor[] {
   return [...staff, ...clients]
 }
 
+const WORK: EventType[] = ['verification.recorded', 'adjustment.proposed', 'finding.dismissed', 'note.created', 'note.resolved', 'thread.message', 'decision.recorded', 'signoff.given', 'sensitive.revealed', 'attachment.added', 'time.logged', 'filing.recorded', 'event.reversed']
 const ALLOWED: Record<Role, EventType[]> = {
-  preparer: ['verification.recorded', 'adjustment.proposed', 'finding.dismissed', 'note.created', 'note.resolved', 'thread.message', 'decision.recorded', 'signoff.given', 'sensitive.revealed', 'attachment.added', 'event.reversed'],
-  reviewer: ['verification.recorded', 'adjustment.proposed', 'adjustment.approved', 'adjustment.rejected', 'finding.dismissed', 'note.created', 'note.resolved', 'thread.message', 'decision.recorded', 'signoff.given', 'sensitive.revealed', 'attachment.added', 'event.reversed'],
-  partner: ['verification.recorded', 'adjustment.proposed', 'adjustment.approved', 'adjustment.rejected', 'finding.dismissed', 'note.created', 'note.resolved', 'thread.message', 'decision.recorded', 'signoff.given', 'sensitive.revealed', 'attachment.added', 'event.reversed'],
-  firm_administrator: ['note.created', 'sensitive.revealed', 'event.reversed'],
-  quality_reviewer: ['note.created', 'note.resolved'],
-  client: ['thread.message', 'attachment.added'],
+  preparer: WORK,
+  reviewer: [...WORK, 'adjustment.approved', 'adjustment.rejected', 'assignment.set'],
+  partner: [...WORK, 'adjustment.approved', 'adjustment.rejected', 'assignment.set'],
+  firm_administrator: ['note.created', 'sensitive.revealed', 'assignment.set', 'standard.changed', 'event.reversed'],
+  quality_reviewer: ['note.created', 'note.resolved', 'thread.message'],
+  client: ['thread.message', 'attachment.added', 'filing.recorded'],
 }
+
+/** Changes to the return itself: blocked once it is frozen at filing, until an amendment starts. */
+const CHANGES_RETURN: EventType[] = ['verification.recorded', 'adjustment.proposed', 'adjustment.approved', 'adjustment.rejected', 'finding.dismissed', 'decision.recorded', 'signoff.given']
 
 /** Which roles may take this kind of action, for the "who can" message. */
 function whoCan(type: EventType): string {
@@ -44,6 +48,8 @@ const VERB: Partial<Record<EventType, string>> = {
   'adjustment.approved': 'approve an adjustment', 'adjustment.rejected': 'reject an adjustment',
   'finding.dismissed': 'dismiss a finding', 'signoff.given': 'sign off', 'decision.recorded': 'record a decision',
   'sensitive.revealed': 'reveal sensitive data', 'note.resolved': 'resolve a note',
+  'assignment.set': 'assign work', 'standard.changed': 'change firm standards', 'time.logged': 'log time',
+  'filing.recorded': 'record a filing step', 'thread.message': 'send a message',
 }
 
 export type Verdict = { ok: true } | { ok: false; reason: string }
@@ -60,8 +66,48 @@ export function checkRules(_m: Model, d: Derived, actor: Actor, action: Action, 
     const verb = VERB[action.type] ?? 'do this'
     return no(`A ${ROLE_LABEL[actor.role].toLowerCase()} cannot ${verb}. Allowed for: ${whoCan(action.type)}.`)
   }
+  if (d.filing.frozen && !d.filing.amending && CHANGES_RETURN.includes(action.type)) {
+    return no('The return is frozen at filing. The partner can start an amendment to change it.')
+  }
 
   switch (action.type) {
+    case 'thread.message': {
+      const p = action.payload as Payloads['thread.message']
+      if (!p.text.trim()) return no('Write the message first.')
+      if (actor.role === 'client' && p.to !== 'staff') return no('Clients reply to the firm.')
+      return OK
+    }
+
+    case 'filing.recorded': {
+      const p = action.payload as Payloads['filing.recorded']
+      if (p.kind === 'client_approved') return actor.role === 'client' ? OK : no('Only the client approves the return and signs the e-file authorization.')
+      if (actor.role === 'client') return no('Clients can approve and sign; the firm records filing steps.')
+      if (p.kind === 'frozen' || p.kind === 'submitted') {
+        if (actor.role !== 'partner') return no(`Filing is signed by the partner (${ROLE_LABEL.partner}).`)
+        const blocking = d.notes.filter((n) => n.blocking && !n.resolved)
+        if (blocking.length) return no(`${blocking.length} open blocking review note${blocking.length > 1 ? 's' : ''}: open review notes block filing.`)
+        if (!d.signoffs.some((s) => s.scope === 'return' && s.level === 'partner' && s.hash === p.hash)) return no('Needs a current partner sign-off on the whole return.')
+        if (!d.filing.clientApproval || d.filing.clientApproval.payload.hash !== p.hash) return no('Needs the client\'s approval and e-file signature on this exact return.')
+        if (p.kind === 'frozen' && d.filing.frozen && !d.filing.amending) return no('Already frozen.')
+        return OK
+      }
+      if (p.kind === 'amendment_started') {
+        if (!d.filing.frozen) return no('Nothing to amend: the return has not been frozen at filing.')
+        if (d.filing.amending) return no('An amendment is already open.')
+        return actor.role === 'partner' || actor.role === 'reviewer' ? OK : no('A reviewer or the partner opens an amendment.')
+      }
+      if (p.kind === 'extension') return actor.role === 'partner' || actor.role === 'reviewer' ? OK : no('A reviewer or the partner files the extension.')
+      return OK
+    }
+
+    case 'standard.changed':
+      return actor.role === 'firm_administrator' ? OK : no('Firm standards are changed by the firm administrator.')
+
+    case 'time.logged': {
+      const p = action.payload as Payloads['time.logged']
+      return p.hours > 0 && p.hours <= 24 ? OK : no('Enter hours between 0 and 24.')
+    }
+
     case 'sensitive.revealed':
       if (!actor.clearance) return no(`${actor.name} has no sensitive-data clearance${actor.note ? ` (${actor.note.replace(/\.$/, '')})` : ''}. Staff with clearance can reveal it.`)
       return OK
@@ -73,8 +119,9 @@ export function checkRules(_m: Model, d: Derived, actor: Actor, action: Action, 
       if (!a) return no('That adjustment no longer exists.')
       if (a.status !== 'proposed') return no(`Already ${a.status}.`)
       if (a.by === actor.id) return no('A person may not review their own work. Another reviewer or the partner must decide.')
-      if (action.type === 'adjustment.approved' && magnitude(a.effect) > PARTNER_THRESHOLD && actor.role !== 'partner') {
-        return no(`Estimated tax effect is over ${PARTNER_THRESHOLD.toLocaleString('en-US')}: firm standard requires the partner to approve.`)
+      const threshold = d.standards.partner_threshold ?? PARTNER_THRESHOLD
+      if (action.type === 'adjustment.approved' && magnitude(a.effect) > threshold && actor.role !== 'partner') {
+        return no(`Estimated tax effect is over ${threshold.toLocaleString('en-US')}: firm standard requires the partner to approve.`)
       }
       return OK
     }
