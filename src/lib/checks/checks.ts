@@ -495,13 +495,21 @@ const businessUse: Check = (m, ctx) => {
   })]
 }
 
+/** Invoices that support a judgment call: their title shares a distinctive word with it. */
+function supportingInvoices(m: Model, text: string): string[] {
+  const words = new Set(text.toLowerCase().match(/[a-z]{6,}/g) ?? [])
+  return docsOfType(m, 'invoice').filter((d) =>
+    (d.title.toLowerCase().match(/[a-z]{6,}/g) ?? []).some((w) => w !== 'invoice' && words.has(w))).map((d) => d.id)
+}
+
 /** Judgment calls the engine left open: alternatives with a tax effect. */
 const whatIfDecisions: Check = (m) =>
   m.packet.what_if.alternatives.filter((w) => w.federal.total_tax_change || w.california.total_tax_change).map((w) => ({
     id: `decision-${w.id}`, check: 'Open judgment calls', title: w.description, area: areaOf(w.changed_lines[0]?.key ?? 'F1040.12'),
     severity: 'judgment' as const, source: 'what_if' as const,
     summary: `The engine computed both treatments. Choosing the alternative changes federal tax by ${signed(w.federal.total_tax_change)} and California tax by ${signed(w.california.total_tax_change)}. Record the decision and the authority relied on.`,
-    evidence: [], lines: w.changed_lines.slice(0, 6).map((c) => c.key), proposals: [],
+    evidence: [...supportingInvoices(m, w.description), ...m.packet.client.call_notes.filter((c) => c.notes.some((n) => supportingInvoices(m, n).length && supportingInvoices(m, w.description).length)).map((c) => c.id)],
+    lines: w.changed_lines.slice(0, 6).map((c) => c.key), proposals: [],
     effect: { fedTax: w.federal.total_tax_change, caTax: w.california.total_tax_change, fedBalance: w.federal.total_tax_change, caBalance: w.california.total_tax_change },
     nextStep: 'Record a decision with the authority relied on.',
   }))

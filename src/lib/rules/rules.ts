@@ -63,7 +63,7 @@ export function checkRules(_m: Model, d: Derived, actor: Actor, action: Action, 
 
   switch (action.type) {
     case 'sensitive.revealed':
-      if (!actor.clearance) return no(`${actor.name} has no sensitive-data clearance${actor.note ? ` (${actor.note})` : ''}. Staff with clearance can reveal it.`)
+      if (!actor.clearance) return no(`${actor.name} has no sensitive-data clearance${actor.note ? ` (${actor.note.replace(/\.$/, '')})` : ''}. Staff with clearance can reveal it.`)
       return OK
 
     case 'adjustment.approved':
