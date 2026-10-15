@@ -1,0 +1,133 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===========================================================================
+   Design tokens.
+   Every colour in the product resolves to one of these custom properties, so
+   the whole app themes from this one block. `-fill` variants are the saturated
+   tone used *behind white text* (buttons, badges); the DEFAULT is the tone used
+   *as* text or a border. In light mode they're identical; in dark mode they
+   diverge, which is what keeps contrast honest.
+   =========================================================================== */
+@layer base {
+  /* D1 "Ledger" - warm stock, ink, and a single blue. Every accent colour is a
+     printer's ink rather than a screen colour: desaturated, high-contrast, and
+     legible next to a figure. */
+  :root {
+    --c-bg: 244 243 238;
+    --c-bgtint: 239 238 231;
+    --c-surface: 251 251 249;
+    --c-surface2: 241 240 234;
+
+    --c-ink: 18 22 28;
+    --c-muted: 90 100 114;
+    --c-faint: 139 147 160;
+
+    --c-line: 216 214 204;
+    --c-line2: 230 228 218;
+    --c-slate-soft: 241 240 234;
+
+    --c-accent: 29 78 216;
+    --c-accent-deep: 30 58 138;
+    --c-accent-soft: 232 237 251;
+    --c-accent-fill: 29 78 216;
+
+    --c-good: 21 128 61;
+    --c-good-deep: 20 83 45;
+    --c-good-soft: 232 242 234;
+    --c-good-fill: 21 128 61;
+
+    --c-warn: 161 98 7;
+    --c-warn-deep: 133 77 14;
+    --c-warn-soft: 246 238 220;
+    --c-warn-fill: 161 98 7;
+
+    --c-ai: 67 56 202;
+    --c-ai-deep: 55 48 163;
+    --c-ai-soft: 234 233 249;
+    --c-ai-fill: 67 56 202;
+
+    --c-danger: 185 28 28;
+    --c-danger-deep: 153 27 27;
+    --c-danger-soft: 247 232 230;
+    --c-danger-fill: 185 28 28;
+
+    /* dark chips, tooltips, coach cards - always light text on top */
+    --c-inverse: 18 22 28;
+    --c-inverse-fg: 251 251 249;
+    --c-scrim: 18 22 28;
+
+    /* the "brand" fill is a flat two-tone ink, not a saturated SaaS gradient */
+    --grad-brand: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+    --grad-brand-soft: linear-gradient(135deg, #e8edfb 0%, #eae9f9 100%);
+    --paper: #ffffff;
+    --paper-rule: #dedcd2;
+
+    --shadow-rgb: 18 22 28;
+    --shadow-a1: 0.04;
+    --shadow-a2: 0.05;
+    --shadow-a3: 0.16;
+
+    --scrollbar: #cfccc0;
+    --scrollbar-hover: #b9b5a6;
+
+    /* no radial glows - this direction is flat stock, not a lit surface */
+    --glow-1: transparent;
+    --glow-2: transparent;
+
+    color-scheme: light;
+  }
+
+  /* There is deliberately no dark counterpart. A tax return is a printed
+     instrument and this direction commits to printed stock - one palette, set
+     once above. `color-scheme: light` on :root keeps form controls and
+     scrollbars in step even when the OS is dark. */
+
+  html, body, #root { height: 100%; }
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+    font-size: 14px;
+    background-image:
+      radial-gradient(1200px 600px at 100% -10%, var(--glow-1), transparent 60%),
+      radial-gradient(1000px 500px at -10% 110%, var(--glow-2), transparent 55%);
+    background-attachment: fixed;
+    transition: background-color .2s ease, color .2s ease;
+  }
+  * { box-sizing: border-box; }
+  ::selection { background: rgb(var(--c-accent) / .22); }
+  /* Newsreader is a serif - the negative tracking that suited Space Grotesk
+     closes it up. Let it set naturally, at the weight it was drawn for. */
+  h1, h2, h3 { font-family: theme('fontFamily.display'); font-weight: 600; letter-spacing: 0; }
+}
+
+@layer utilities {
+  .tnum { font-family: theme('fontFamily.mono'); font-variant-numeric: tabular-nums; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .bg-brand { background-image: var(--grad-brand); }
+  .bg-brand-soft { background-image: var(--grad-brand-soft); }
+  .grad-text {
+    background-image: var(--grad-brand);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .glass { backdrop-filter: saturate(1.4) blur(10px); }
+  .paper { background: repeating-linear-gradient(var(--paper), var(--paper) 30px, var(--paper-rule) 31px); }
+}
+
+/* thin scrollbars for the app panes */
+.pane::-webkit-scrollbar { width: 10px; height: 10px; }
+.pane::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 8px; border: 3px solid transparent; background-clip: content-box; }
+.pane::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); background-clip: content-box; }
+
+.animate-fade { animation: fadeUp .22s cubic-bezier(.2,.7,.3,1) both; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* shimmer used by skeletons and the simulated ingestion flow */
+.shimmer { position: relative; overflow: hidden; }
+.shimmer::after {
+  content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(var(--c-accent) / .10), transparent);
+  animation: shimmer 1.2s infinite;
+}
+@keyframes shimmer { 100% { transform: translateX(100%); } }
