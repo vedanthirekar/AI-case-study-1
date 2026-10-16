@@ -80,18 +80,18 @@ function StartHere({ onOpen }: { onOpen: () => void }) {
   if (hidden) return null
   const hide = () => { setHidden(true); try { localStorage.setItem(HIDE_KEY, '1') } catch { /* private mode: hidden for this visit */ } }
   const steps: [string, string, string][] = [
-    ['play', 'Load the mid-season demo', 'A week of review work, with you as Daniel the reviewer. Or start from the packet as delivered.'],
-    ['route', 'Open the client file', 'The return map shows where each problem lands. Hover an issue; click any box to trace that number to the exact field on its source document.'],
-    ['users', 'Switch roles (top right)', 'Act as preparer, reviewer, partner, a new hire without data clearance, or the client. Controls you cannot use stay visible and say why.'],
-    ['clock', 'Move the season clock', 'Replay the season: late and corrected documents, the e-file rejection, payments and a notice.'],
-    ['sparkle', 'Ask Mira', 'An AI assistant that answers from this file and cites its sources. It runs on a free model, so answers can take a little while.'],
+    ['play', 'Load sample work', 'See a return halfway through review, as Daniel the reviewer. Or skip it and start from the beginning.'],
+    ['route', 'Open the client', 'The map shows the return from income to what is owed, with problems where they hit. Click any number to see where it came from.'],
+    ['users', 'Switch people', 'Use the menu at top right to work as a preparer, reviewer, partner, new hire or the client. Anything you cannot do is greyed out, with the reason.'],
+    ['clock', 'Change the date', 'Use the date at the top to move through tax season: new documents arrive, the return is filed, and letters come back from the IRS.'],
+    ['sparkle', 'Ask Mira', 'Ask questions in plain English. Mira answers from this client\'s file and shows where each answer came from. Replies can take up to a minute.'],
   ]
   return (
     <Card className="border-accent/30 bg-accent-soft/30 p-4">
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h2 className="font-display text-title font-bold">Trying this out? Start here</h2>
-          <p className="text-meta text-muted">A working tax workpaper for one household's 2025 return, built from the packet as delivered. Everything you do is saved in this browser, and other tabs update live.</p>
+          <h2 className="font-display text-title font-bold">New here? Take a quick tour</h2>
+          <p className="text-meta text-muted">Miraflores is where a tax firm reviews a client's return: where every number came from, what was changed, who checked it and what is still open. Your work is saved in this browser.</p>
         </div>
         <button onClick={hide} aria-label="Hide" className="text-faint hover:text-ink"><Icon name="x" size={16} /></button>
       </div>
@@ -104,8 +104,8 @@ function StartHere({ onOpen }: { onOpen: () => void }) {
         ))}
       </ol>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Btn size="sm" variant="primary" onClick={() => { void loadDemo().then(onOpen) }}><Icon name="play" size={13} />Load the demo and open the file</Btn>
-        <Btn size="sm" onClick={onOpen}><Icon name="arrow-right" size={13} />Open the file as delivered</Btn>
+        <Btn size="sm" variant="primary" onClick={() => { void loadDemo().then(onOpen) }}><Icon name="play" size={13} />Load sample work and open</Btn>
+        <Btn size="sm" onClick={onOpen}><Icon name="arrow-right" size={13} />Open the client</Btn>
       </div>
     </Card>
   )
