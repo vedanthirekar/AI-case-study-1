@@ -6,6 +6,7 @@ import { areaOf } from '../packet/areas'
 import type { Action, EventType, Payloads, AdjustmentPayload, WPEvent } from '../workpaper/events'
 import type { Derived } from '../workpaper/derive'
 import { magnitude } from '../workpaper/effect'
+import { runChecks } from '../checks/checks'
 
 export type Role = 'preparer' | 'reviewer' | 'partner' | 'firm_administrator' | 'quality_reviewer' | 'client'
 
@@ -58,7 +59,7 @@ const OK: Verdict = { ok: true }
 
 export const PARTNER_THRESHOLD = 1000
 
-export function checkRules(_m: Model, d: Derived, actor: Actor, action: Action, simNow: string, events: WPEvent[]): Verdict {
+export function checkRules(m: Model, d: Derived, actor: Actor, action: Action, simNow: string, events: WPEvent[]): Verdict {
   if (simNow.slice(0, 10) < actor.activeFrom) {
     return no(`${actor.name} does not join the firm until ${actor.activeFrom}. Move the season clock forward or switch person.`)
   }
@@ -86,6 +87,9 @@ export function checkRules(_m: Model, d: Derived, actor: Actor, action: Action, 
         if (actor.role !== 'partner') return no(`Filing is signed by the partner (${ROLE_LABEL.partner}).`)
         const blocking = d.notes.filter((n) => n.blocking && !n.resolved)
         if (blocking.length) return no(`${blocking.length} open blocking review note${blocking.length > 1 ? 's' : ''}: open review notes block filing.`)
+        // Findings that e-file would reject (identity numbers) must be handled first.
+        const blockers = runChecks(m, { simNow }).filter((f) => f.blocksFiling && !d.dismissals.has(f.id) && !d.verifications.has(`finding:${f.id}`) && !d.decisions.some((e) => e.payload.topic === f.id))
+        if (blockers.length) return no(`Fix first (e-file would reject): ${blockers.map((f) => f.title).join('; ')}. Mark each handled in Review once corrected.`)
         if (!d.signoffs.some((s) => s.scope === 'return' && s.level === 'partner' && s.hash === p.hash)) return no('Needs a current partner sign-off on the whole return.')
         if (!d.filing.clientApproval || d.filing.clientApproval.payload.hash !== p.hash) return no('Needs the client\'s approval and e-file signature on this exact return.')
         if (p.kind === 'frozen' && d.filing.frozen && !d.filing.amending) return no('Already frozen.')
