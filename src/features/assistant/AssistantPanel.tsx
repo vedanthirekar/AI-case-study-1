@@ -1,4 +1,4 @@
-// "Ask the workpaper": a chat docked beside the page. The model runs on the
+// "Ask Mira": the AI assistant, a chat docked beside the page. The model runs on the
 // server; its tools run here, against this tab's workpaper. Answers cite refs,
 // which render as chips that open the trace, the document or the issue.
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -81,8 +81,8 @@ export default function AssistantPanel() {
       <div className="flex items-center gap-2 border-b border-line px-4 py-3">
         <span className="grid h-7 w-7 place-items-center rounded-lg bg-ai-soft text-ai"><Icon name="sparkle" size={15} /></span>
         <div className="min-w-0 flex-1 leading-tight">
-          <div className="font-display text-title font-bold">Ask the workpaper</div>
-          <div className="text-micro text-muted">{client ? 'About your 2025 return' : 'Answers from this client file, with sources'}</div>
+          <div className="font-display text-title font-bold">Ask Mira <span className="ml-1 rounded bg-ai-soft px-1 align-middle text-[10px] font-bold uppercase tracking-wider text-ai">AI</span></div>
+          <div className="text-micro text-muted">{client ? 'About your 2025 return' : 'Your AI assistant for this client file. Every answer cites its sources.'}</div>
         </div>
         {messages.length > 0 && (
           <button onClick={() => { stop(); setMessages([]); clearError() }} title="New conversation" className="rounded-lg px-2 py-1 text-micro font-semibold text-muted hover:bg-slateSoft hover:text-ink">New</button>
@@ -129,7 +129,7 @@ function Suggestions({ client, onPick, trace }: { client: boolean; onPick: (q: s
     ]
   return (
     <div className="space-y-2">
-      <p className="text-meta text-muted">{client ? 'Ask in your own words. Answers come from your file.' : 'Ask about this client. The assistant looks things up in the workpaper and cites every source, so you can click through and check.'}</p>
+      <p className="text-meta text-muted">{client ? 'Ask in your own words. Answers come from your file.' : 'Ask about this client. Mira looks things up in the workpaper and cites every source, so you can click through and check.'}</p>
       {qs.map((q) => (
         <button key={q} onClick={() => onPick(q)} className="block w-full rounded-lg border border-line2 px-3 py-2 text-left text-meta text-ink transition hover:border-ai/50 hover:bg-ai-soft/30">{q}</button>
       ))}

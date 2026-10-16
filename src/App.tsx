@@ -2,8 +2,8 @@
 // file: Return map, Review, Documents, Schedules, Filing. Clients see only their portal.
 import { useEffect, useState, lazy, Suspense, type ReactNode } from 'react'
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
-import AppShell, { TopBarButton } from './components/shell/AppShell'
-import { EmptyState, Icon, SkeletonRows } from './components/ui'
+import AppShell from './components/shell/AppShell'
+import { EmptyState, Icon, SkeletonRows, cx } from './components/ui'
 import { useApp, useActor } from './state/app'
 import { C, FIRM } from './lib/paths'
 import ClientsPage from './pages/ClientsPage'
@@ -113,9 +113,19 @@ function Ready() {
   )
 }
 
+/** The assistant's entry point: named and labelled, so people know it is there. */
 function AskButton() {
   const toggle = useAssistant((s) => s.toggle)
-  return <TopBarButton icon="sparkle" label="Ask the workpaper" onClick={toggle} />
+  const open = useAssistant((s) => s.open)
+  return (
+    <button onClick={toggle} aria-pressed={open} title="Ask Mira, the AI assistant, about this client file"
+      className={cx('flex h-9 items-center gap-2 rounded-lg border px-3 text-meta font-semibold transition',
+        open ? 'border-ai bg-ai-fill text-white' : 'border-ai/40 bg-ai-soft text-ai hover:border-ai hover:bg-ai-soft/70')}>
+      <Icon name="sparkle" size={18} />
+      Ask Mira
+      <span className={cx('rounded px-1 text-[10px] font-bold uppercase tracking-wider', open ? 'bg-white/20' : 'bg-ai/10')}>AI</span>
+    </button>
+  )
 }
 
 /** Mounted from the first open on, so the conversation survives closing the panel. */

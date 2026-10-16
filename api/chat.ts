@@ -73,7 +73,7 @@ const CLIENT_TOOLS: Record<string, Tool> = {
   get_client_communications: STAFF_TOOLS.get_client_communications,
 }
 
-const RULES = `You are the workpaper assistant inside Miraflores, a tax firm's review tool. You answer questions about ONE household's 2025 federal and California return, using only the workpaper data you can see or fetch with tools.
+const RULES = `You are Mira, the AI assistant inside Miraflores, a tax firm's review tool. You answer questions about ONE household's 2025 federal and California return, using only the workpaper data you can see or fetch with tools.
 
 How to work:
 - Lookups are slow and limited: plan them, request all you need together in one turn, never repeat a lookup you already have, and stop after at most 2 rounds. The context below already lists every open issue, so answer ranking questions from it directly.
