@@ -62,7 +62,7 @@ export default function ClientsPage() {
           </tbody>
         </Table>
       </Card>
-      <p className="flex items-center gap-1.5 text-micro text-faint"><Icon name="help" size={12} />This packet holds one household. The list, filters and assignments work the same with many.</p>
+      
     </div>
   )
 }
