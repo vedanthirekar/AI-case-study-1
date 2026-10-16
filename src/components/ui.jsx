@@ -1,7 +1,8 @@
 // Shared UI primitives. Dependency-free inline SVG icons.
 // Colours come from the token layer in index.css: `-fill` tones sit behind white
 // text, plain tones are used as text/borders, so everything themes for free.
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 export const cx = (...a) => a.filter(Boolean).join(' ')
 
@@ -80,26 +81,47 @@ export function Btn({ variant = 'default', size = 'md', className = '', children
 // filling its parent instead.
 export function Tooltip({ label, children, side = 'top', className = '' }) {
   const [open, setOpen] = useState(false)
-  // `*-end` variants anchor to the trigger's right edge instead of centring -
-  // needed near the viewport edge, where a centred tooltip would overflow.
-  const pos = {
-    top: 'bottom-full left-1/2 mb-1.5 -translate-x-1/2',
-    bottom: 'top-full left-1/2 mt-1.5 -translate-x-1/2',
-    'bottom-end': 'top-full right-0 mt-1.5',
-    right: 'left-full top-1/2 ml-2 -translate-y-1/2',
-  }[side] || 'bottom-full left-1/2 mb-1.5 -translate-x-1/2'
+  const anchor = useRef(null)
+  const tip = useRef(null)
+  const [pos, setPos] = useState(null)
+  // The tooltip renders on document.body with fixed coordinates, so a scrolling
+  // panel never clips it, and it is clamped inside the window. `side` is the
+  // preferred placement; it flips when there is no room.
+  useLayoutEffect(() => {
+    if (!open || !anchor.current || !tip.current) return
+    const a = anchor.current.getBoundingClientRect()
+    const t = tip.current.getBoundingClientRect()
+    const gap = 6, pad = 8, vw = window.innerWidth, vh = window.innerHeight
+    let x, y
+    if (side === 'right') {
+      x = a.right + gap; y = a.top + a.height / 2 - t.height / 2
+      if (x + t.width > vw - pad) x = a.left - gap - t.width
+    } else {
+      const below = side === 'bottom' || side === 'bottom-end'
+      x = side === 'bottom-end' ? a.right - t.width : a.left + a.width / 2 - t.width / 2
+      y = below ? a.bottom + gap : a.top - gap - t.height
+      if (!below && y < pad) y = a.bottom + gap
+      if (below && y + t.height > vh - pad) y = a.top - gap - t.height
+    }
+    x = Math.min(Math.max(x, pad), vw - pad - t.width)
+    y = Math.min(Math.max(y, pad), vh - pad - t.height)
+    setPos({ x, y })
+  }, [open, side, label])
+  const show = () => { setPos(null); setOpen(true) }
   // A disabled control fires no mouse events, so its tooltip (rule 8: say which
   // role can, and why) would never open. Letting the pointer pass through
   // disabled children puts the hover on this wrapper instead. Focus opens it too.
   return (
-    <span className={cx('relative inline-flex [&_:disabled]:pointer-events-none', className)}
-      onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}
-      onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}>
+    <span ref={anchor} className={cx('relative inline-flex [&_:disabled]:pointer-events-none', className)}
+      onMouseEnter={show} onMouseLeave={() => setOpen(false)}
+      onFocus={show} onBlur={() => setOpen(false)}>
       {children}
-      {open && label && (
-        <span className={cx('pointer-events-none absolute z-50 w-max max-w-[240px] rounded-lg bg-inverse px-2.5 py-1.5 text-micro font-medium leading-snug text-inverse-fg shadow-e3', pos)}>
+      {open && label && createPortal(
+        <span ref={tip} role="tooltip" style={{ left: pos?.x ?? 0, top: pos?.y ?? 0, visibility: pos ? 'visible' : 'hidden' }}
+          className="pointer-events-none fixed z-[100] w-max max-w-[240px] rounded-lg bg-inverse px-2.5 py-1.5 text-micro font-medium leading-snug text-inverse-fg shadow-e3">
           {label}
-        </span>
+        </span>,
+        document.body,
       )}
     </span>
   )

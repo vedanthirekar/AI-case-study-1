@@ -11,7 +11,8 @@ import FitOnResize from '../graph/FitOnResize'
 
 type Data = { node: SpineNode; stat: SpineStat; dim: boolean; lit: boolean }
 
-const W = 184, H = 80
+// Every card has this exact size, so the layout never overlaps them.
+const W = 196, H = 84
 
 const TONE = {
   error: 'border-danger bg-danger-soft/40',
@@ -27,7 +28,8 @@ const Card = memo(({ data }: NodeProps<Node<Data>>) => {
   const value = typeof stat.value === 'number' ? stat.value : null
   const shownLabel = node.id === 'owed' && stat.estimate != null && stat.estimate < 0 ? 'Refund (estimate)' : node.label
   return (
-    <div className={cx('rounded-md border-2 px-3 py-2 shadow-sm transition', tone, dim && 'opacity-40', lit && 'ring-4 ring-accent/40', bottom && 'border-[3px]')} style={{ width: W, minHeight: H }}>
+    <div className={cx('flex flex-col overflow-hidden rounded-md border-2 px-3 py-1.5 shadow-sm transition', tone, dim && 'opacity-40', lit && 'ring-4 ring-accent/40', bottom && 'border-[3px]')} style={{ width: W, height: H }}
+      title={stat.open.length ? `${stat.open.length} open issue${stat.open.length > 1 ? 's' : ''}${stat.atRisk >= 1 ? `, about ${fmtMoney(Math.round(stat.atRisk))} of tax at risk` : ''}` : undefined}>
       <Handle type="target" position={Position.Left} className="!h-1.5 !w-1.5 !border-0 !bg-faint" />
       <Handle type="source" position={Position.Right} className="!h-1.5 !w-1.5 !border-0 !bg-faint" />
       <div className="flex items-center gap-1.5">
@@ -36,12 +38,12 @@ const Card = memo(({ data }: NodeProps<Node<Data>>) => {
       </div>
       <div className="tnum text-title font-semibold">{value != null ? fmtMoney(value) : fmtValue(stat.value)}</div>
       {stat.estimate != null && Math.round(stat.estimate) !== Math.round(value ?? NaN) && (
-        <div className="tnum text-micro text-accent">est. with fixes {fmtMoney(Math.abs(stat.estimate))}{stat.estimate < 0 && (node.id === 'owed' || node.id === 'ca_owed') ? ' refund' : ''}</div>
+        <div className="tnum truncate text-micro text-accent">est. with fixes {fmtMoney(Math.abs(stat.estimate))}{stat.estimate < 0 && (node.id === 'owed' || node.id === 'ca_owed') ? ' refund' : ''}</div>
       )}
-      <div className="mt-1 flex items-center gap-2 text-micro">
+      <div className="mt-auto flex items-center gap-2 whitespace-nowrap text-micro">
         {stat.open.length > 0 ? (
           <span className={cx('flex items-center gap-1 font-semibold', stat.worst === 'error' ? 'text-danger' : stat.worst === 'judgment' ? 'text-ai' : 'text-warn')}>
-            <Icon name="alert" size={11} />{stat.open.length} issue{stat.open.length > 1 ? 's' : ''}{stat.atRisk >= 1 && ` · ${fmtMoney(Math.round(stat.atRisk))} at risk`}
+            <Icon name="alert" size={11} />{stat.open.length} issue{stat.open.length > 1 ? 's' : ''}{stat.atRisk >= 1 && ` · ${fmtMoney(Math.round(stat.atRisk))}`}
           </span>
         ) : stat.adjusted ? <span className="flex items-center gap-1 text-accent"><Icon name="edit" size={11} />adjusted</span>
           : <span className="flex items-center gap-1 text-good"><Icon name="check" size={11} />no open issues</span>}
@@ -56,7 +58,7 @@ const nodeTypes = { spine: Card }
 export default function ReturnMap({ stats, highlight, onPick }: { stats: Map<string, SpineStat>; highlight: Set<string> | null; onPick: (n: SpineNode) => void }) {
   const { nodes, edges } = useMemo(() => {
     const g = new dagre.graphlib.Graph()
-    g.setGraph({ rankdir: 'LR', nodesep: 12, ranksep: 38, marginx: 6, marginy: 6 })
+    g.setGraph({ rankdir: 'LR', nodesep: 14, ranksep: 64, marginx: 6, marginy: 6 })
     g.setDefaultEdgeLabel(() => ({}))
     for (const n of SPINE) g.setNode(n.id, { width: W, height: H })
     for (const n of SPINE) for (const t of n.to) g.setEdge(n.id, t)
@@ -69,11 +71,13 @@ export default function ReturnMap({ stats, highlight, onPick }: { stats: Map<str
       }
     })
     const edges: Edge[] = SPINE.flatMap((n) => n.to.map((t) => {
-      const hot = (stats.get(n.id)?.open.length ?? 0) > 0
+      // Curved, thin and neutral: eight incomes fan into AGI, and right-angled or
+      // coloured edges turned that fan into a tangle. Only a highlighted issue colours its edges.
+      const lit = !!highlight && (highlight.has(n.id) || highlight.has(t))
       return {
-        id: `${n.id}-${t}`, source: n.id, target: t, type: 'smoothstep',
-        markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14 },
-        style: { stroke: hot ? 'rgb(var(--c-warn))' : 'rgb(var(--c-faint))', strokeWidth: hot ? 2 : 1.3, opacity: highlight && !(highlight.has(n.id) || highlight.has(t)) ? 0.25 : 1 },
+        id: `${n.id}-${t}`, source: n.id, target: t, type: 'default',
+        markerEnd: { type: MarkerType.ArrowClosed, width: 12, height: 12, color: lit ? 'rgb(var(--c-accent))' : 'rgb(var(--c-faint))' },
+        style: { stroke: lit ? 'rgb(var(--c-accent))' : 'rgb(var(--c-faint))', strokeWidth: lit ? 2 : 1.2, opacity: highlight && !lit ? 0.25 : 0.9 },
       }
     }))
     return { nodes, edges }
