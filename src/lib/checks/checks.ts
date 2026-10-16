@@ -134,7 +134,7 @@ const sehiEligibility: Check = (m) => {
   return [finding(m, {
     id: 'sehi-eligibility', check: 'Self-employed health insurance eligibility', title: 'Health insurance deduction not allowed (eligible for spouse\'s employer plan)',
     severity: 'error', source: 'check', lines: [line.key],
-    summary: `The engine deducted ${money(num(line))} of premiums. The client says Erik was eligible for family coverage through both of Ngozi's employers all year; eligibility for a subsidized employer plan disallows the deduction for those months.${prior ? ' Last year\'s preparer took none for the same reason.' : ''}`,
+    summary: `The engine deducted ${money(num(line))} of premiums. The client says both of Ngozi's employers offered family coverage Erik could join; no deduction is allowed for months he was eligible for a subsidized employer plan.${prior ? ' Last year\'s preparer took none for the same reason.' : ''}`,
     evidence: [qa.id, ...line.sources, ...(prior ? ['py:/return_2024/notes/Sch1.17'] : [])],
     proposals: [{ lineKey: line.key, from: line.value, to: 0, fed: { category: 'adjustment', amount: -num(line) }, ca: { category: 'adjustment', amount: -num(line) }, reason: 'Not eligible: could participate in a spouse\'s subsidized employer plan (IRC 162(l)(2)(B)).' }],
   })]

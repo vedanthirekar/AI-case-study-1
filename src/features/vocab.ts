@@ -26,7 +26,7 @@ export const FINDING_STATUS: Vocab = {
 }
 
 export const ADJ_STATUS: Vocab = {
-  proposed: { label: 'Awaiting approval', tone: 'warn', icon: 'clock', desc: 'Proposed; a reviewer (or the partner, over 1,000 tax effect) must approve.' },
+  proposed: { label: 'Awaiting approval', tone: 'warn', icon: 'clock', desc: 'Proposed; a reviewer must approve (the partner, when the tax effect is over the firm threshold).' },
   approved: { label: 'Approved', tone: 'good', icon: 'check', desc: 'Approved by someone other than the person who proposed it.' },
   rejected: { label: 'Rejected', tone: 'danger', icon: 'x', desc: 'Rejected with a note; the original value stands.' },
 }

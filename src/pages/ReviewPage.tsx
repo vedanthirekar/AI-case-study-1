@@ -12,7 +12,7 @@ import { AREAS, AREA_BY_ID } from '../lib/packet/areas'
 import { fmtSigned, fmtValue, fmtDateTime } from '../lib/format'
 import { addEffects, ZERO, magnitude } from '../lib/workpaper/effect'
 import type { Action } from '../lib/workpaper/events'
-import { useFindings, type ReviewedFinding } from '../features/findings'
+import { isOpenIssue, useFindings, type ReviewedFinding } from '../features/findings'
 import { SEVERITY, FINDING_STATUS, ADJ_STATUS } from '../features/vocab'
 import { RefChip, QuoteRef } from '../features/RefChip'
 import { ActionButton } from '../features/ActionButton'
@@ -53,7 +53,8 @@ export default function ReviewPage() {
   const shown = findings.filter((f) =>
     (status === 'all' || (status === 'open' ? f.status === 'open' : f.status !== 'open')) &&
     (area === 'all' || f.area === area) && (sev === 'all' || f.severity === sev))
-  const open = findings.filter((f) => f.status === 'open')
+  const open = findings.filter(isOpenIssue)
+  const notes = findings.filter((f) => f.status === 'open' && f.severity === 'info').length
   const fixable = open.filter((f) => f.proposals.length)
   const ifAccepted = fixable.reduce((acc, f) => addEffects(acc, f.effect), ZERO)
   const selected = findings.find((f) => f.id === sel)
@@ -71,7 +72,7 @@ export default function ReviewPage() {
             <div>
               <h1 className="font-display text-display font-bold">Review</h1>
               <p className="text-body text-muted">
-                {open.length} open findings from independent checks. Accepting every proposed fix would move federal tax by <b className="tnum">{fmtSigned(ifAccepted.fedTax)}</b> and California tax by <b className="tnum">{fmtSigned(ifAccepted.caTax)}</b>.
+                {open.length} open issues from independent checks{notes > 0 && `, plus ${notes} informational note${notes > 1 ? 's' : ''}`}. Accepting every proposed fix would move federal tax by <b className="tnum">{fmtSigned(ifAccepted.fedTax)}</b> and California tax by <b className="tnum">{fmtSigned(ifAccepted.caTax)}</b>.
               </p>
             </div>
             <Tooltip label="What the badges mean" side="bottom-end"><button onClick={() => setLegend((x) => !x)} className="grid h-8 w-8 place-items-center rounded-lg border border-line text-muted hover:text-ink"><Icon name="help" size={15} /></button></Tooltip>

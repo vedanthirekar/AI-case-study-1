@@ -26,10 +26,12 @@ const Card = memo(({ data }: NodeProps<Node<Data>>) => {
   const tone = stat.worst ? TONE[stat.worst] : stat.adjusted ? 'border-accent bg-accent-soft/40' : 'border-line bg-surface'
   const bottom = node.id === 'owed' || node.id === 'ca_owed'
   const value = typeof stat.value === 'number' ? stat.value : null
+  // The California line holds the overpayment as a positive refund; the estimate is a balance (negative = refund).
+  const estShown = stat.estimate == null ? null : node.id === 'ca_owed' ? -stat.estimate : stat.estimate
   const shownLabel = node.id === 'owed' && stat.estimate != null && stat.estimate < 0 ? 'Refund (estimate)' : node.label
   return (
     <div className={cx('flex flex-col overflow-hidden rounded-md border-2 px-3 py-1.5 shadow-sm transition', tone, dim && 'opacity-40', lit && 'ring-4 ring-accent/40', bottom && 'border-[3px]')} style={{ width: W, height: H }}
-      title={stat.open.length ? `${stat.open.length} open issue${stat.open.length > 1 ? 's' : ''}${stat.atRisk >= 1 ? `, about ${fmtMoney(Math.round(stat.atRisk))} of tax at risk` : ''}` : undefined}>
+      title={stat.open.length ? `${stat.open.length} open issue${stat.open.length > 1 ? 's' : ''}${stat.atRisk >= 1 ? `, about ${fmtMoney(Math.round(stat.atRisk))} owed differently if fixed (estimate)` : ''}` : undefined}>
       <Handle type="target" position={Position.Left} className="!h-1.5 !w-1.5 !border-0 !bg-faint" />
       <Handle type="source" position={Position.Right} className="!h-1.5 !w-1.5 !border-0 !bg-faint" />
       <div className="flex items-center gap-1.5">
@@ -37,8 +39,8 @@ const Card = memo(({ data }: NodeProps<Node<Data>>) => {
         {node.jurisdiction === 'california' && <span className="ml-auto rounded-sm bg-bgtint px-1 text-[10px] font-bold text-muted">CA</span>}
       </div>
       <div className="tnum text-title font-semibold">{value != null ? fmtMoney(value) : fmtValue(stat.value)}</div>
-      {stat.estimate != null && Math.round(stat.estimate) !== Math.round(value ?? NaN) && (
-        <div className="tnum truncate text-micro text-accent">est. with fixes {fmtMoney(Math.abs(stat.estimate))}{stat.estimate < 0 && (node.id === 'owed' || node.id === 'ca_owed') ? ' refund' : ''}</div>
+      {stat.estimate != null && Math.round(estShown!) !== Math.round(value ?? NaN) && (
+        <div className="tnum truncate text-micro text-accent">est. with fixes {fmtMoney(Math.abs(stat.estimate))}{bottom ? (stat.estimate < 0 ? ' refund' : ' owed') : ''}</div>
       )}
       <div className="mt-auto flex items-center gap-2 whitespace-nowrap text-micro">
         {stat.open.length > 0 ? (

@@ -36,6 +36,11 @@ export function addEffects(a: Effect, b: Effect): Effect {
   return { fedTax: a.fedTax + b.fedTax, caTax: a.caTax + b.caTax, fedBalance: a.fedBalance + b.fedBalance, caBalance: a.caBalance + b.caBalance }
 }
 
+/** Change in what the household owes, federal plus California (tax and payments). Positive: owes more. */
+export function netChange(e: Effect): number {
+  return e.fedBalance + e.caBalance
+}
+
 /** Largest absolute tax or balance movement, used for ranking and the partner threshold. */
 export function magnitude(e: Effect): number {
   return Math.max(Math.abs(e.fedTax), Math.abs(e.caTax), Math.abs(e.fedBalance), Math.abs(e.caBalance))

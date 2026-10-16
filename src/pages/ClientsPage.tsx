@@ -8,7 +8,7 @@ import { Avatar, Card, Tag } from '../components/ui'
 import { useApp, useDerived, useModel } from '../state/app'
 import { fmtDate, fmtMoney } from '../lib/format'
 import { C } from '../lib/paths'
-import { useFindings } from '../features/findings'
+import { useFindings, isOpenIssue } from '../features/findings'
 import { readiness } from '../features/readiness'
 import { usePeople } from '../features/people'
 
@@ -23,12 +23,14 @@ export default function ClientsPage() {
   useEffect(() => { publish({ crumbs: [{ label: 'Clients' }] }) }, [publish])
 
   const steps = useMemo(() => readiness(m, d, findings, simNow), [m, d, findings, simNow])
-  const open = findings.filter((f) => f.status === 'open')
+  const open = findings.filter(isOpenIssue)
   const sum = m.current.v.summary
   const fed = Math.round(sum.federal.balance_due + d.totalEffect.fedBalance)
   const a = m.packet.firm.assignment_at_start
   const due = m.packet.firm.deadlines.filter((x) => x.date >= simNow.slice(0, 10)).sort((x, y) => x.date.localeCompare(y.date))[0]
-  const days = due ? Math.round((Date.parse(due.date) - Date.parse(simNow.slice(0, 10))) / 86400000) : null
+  // The return is due April 15 until the extension (Form 4868 / FTB 3519) is on the timeline.
+  const ext = m.timeline.find((t) => t.event === 'extension_filed_with_payment' && t.at <= simNow)
+  const returnDue = m.packet.firm.deadlines.find((x) => (ext ? /extended due date/i : /original due date/i).test(x.what))?.date
   const status = d.filing.amending ? 'Amending' : d.filing.frozen ? 'Filed' : d.filing.clientApproval ? 'Client approved' : open.length ? 'In review' : 'Ready'
   const names = m.packet.household.people.filter((p) => p.role !== 'dependent').map((p) => p.name)
 
@@ -57,7 +59,7 @@ export default function ClientsPage() {
               <Td num className={open.length ? 'text-warn' : ''}>{open.length}</Td>
               <Td num>{steps.filter((s) => s.done).length}/{steps.length}</Td>
               <Td num>{fmtMoney(Math.abs(fed))} {fed < 0 ? 'refund' : 'owed'}</Td>
-              <Td className="text-micro">{fmtDate('2026-10-15')}{days != null && <div className="text-faint">extended</div>}</Td>
+              <Td className="text-micro">{returnDue ? fmtDate(returnDue) : '-'}{ext && <div className="text-faint">extended</div>}</Td>
             </Tr>
           </tbody>
         </Table>

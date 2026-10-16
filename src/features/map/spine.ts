@@ -6,7 +6,7 @@ import type { Model } from '../../lib/packet/model'
 import { num } from '../../lib/packet/model'
 import type { Derived } from '../../lib/workpaper/derive'
 import { effectiveValue } from '../../lib/workpaper/derive'
-import { magnitude } from '../../lib/workpaper/effect'
+import { atStake, isOpenIssue } from '../findings'
 import type { ReviewedFinding } from '../findings'
 
 export interface SpineNode {
@@ -92,7 +92,7 @@ export function landingNodes(m: Model, f: ReviewedFinding): string[] {
 export interface SpineStat { value: number | string | null; estimate?: number; open: ReviewedFinding[]; atRisk: number; worst: 'error' | 'warning' | 'judgment' | 'info' | null; adjusted: number }
 
 export function spineStats(m: Model, d: Derived, findings: ReviewedFinding[]) {
-  const open = findings.filter((f) => f.status === 'open')
+  const open = findings.filter(isOpenIssue)
   const landing = new Map(open.map((f) => [f.id, landingNodes(m, f)]))
   const sum = m.current.v.summary
   const e = d.totalEffect
@@ -106,7 +106,7 @@ export function spineStats(m: Model, d: Derived, findings: ReviewedFinding[]) {
     stats.set(n.id, {
       value: effectiveValue(m, d, n.key).value,
       estimate: n.estimate ? Math.round(est[n.estimate]) : undefined,
-      open: here, atRisk: here.reduce((s, f) => s + magnitude(f.effect), 0), worst, adjusted,
+      open: here, atRisk: here.reduce((s, f) => s + atStake(f), 0), worst, adjusted,
     })
   }
   return { stats, landing }

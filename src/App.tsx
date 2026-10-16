@@ -14,7 +14,7 @@ import FilingPage, { ClientPortal, ClientCopy, NoticeResponse, NextYear } from '
 import FirmPage from './pages/FirmPage'
 import { RoleSwitcher, SeasonClock, GlobalSearch, DemoMenu } from './features/shell/TopBar'
 import { NotificationBell } from './features/shell/Notifications'
-import { useFindings } from './features/findings'
+import { useFindings, isOpenIssue } from './features/findings'
 import { useAssistant } from './features/assistant/store'
 
 // The graph library is only downloaded when a client file is opened.
@@ -57,7 +57,7 @@ function ClientBadge() {
 function Ready() {
   const me = useActor()
   const loc = useLocation()
-  const open = useFindings().filter((f) => f.status === 'open').length
+  const open = useFindings().filter(isOpenIssue).length
   const tools = <>{me.role !== 'client' && <GlobalSearch />}<AskButton /><SeasonClock /><NotificationBell /><RoleSwitcher /><DemoMenu /></>
 
   if (me.role === 'client') {

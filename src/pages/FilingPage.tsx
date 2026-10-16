@@ -404,7 +404,7 @@ export function NextYear() {
             <Table dense><tbody>{pr.federal_estimate_due_dates.map((x) => <Tr key={x}><Td>Federal · {fmtDate(x)}</Td><Td num>{fmtMoney(fedQ)}</Td></Tr>)}</tbody></Table>
             <p className="text-muted">{pr.california_safe_harbor}</p>
             <Table dense><tbody>{pr.california_estimate_due_dates.map((x, i) => <Tr key={x}><Td>California · {fmtDate(x)} ({Math.round(pr.california_installment_percentages[i] * 100)}%)</Td><Td num>{fmtMoney(Math.round(caTotal * pr.california_installment_percentages[i]))}</Td></Tr>)}</tbody></Table>
-            <p className="text-micro text-faint">Safe harbor at 110% of 2025 tax after adjustments ({fmtMoney(fig.fedTax)} federal, {fmtMoney(fig.caTax)} California). California may be far less: only California-source income is taxed after the move.</p>
+            <p className="text-micro text-faint">Safe harbor at 110% of 2025 tax after adjustments ({fmtMoney(fig.fedTax)} federal, {fmtMoney(fig.caTax)} California), before withholding: 2026 W-2 withholding counts toward it, so reduce each installment by a quarter of the expected withholding. California may be far less: only California-source income is taxed after the move.</p>
           </div>
         </Card>
         <Card><div className="border-b border-line px-4 py-2.5"><h2 className="font-display text-title font-bold">Known changes for 2026</h2></div>

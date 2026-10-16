@@ -7,10 +7,10 @@ import StatusBadge from '../components/StatusBadge'
 import { Icon, Tag, cx } from '../components/ui'
 import { useApp, useDerived, useModel } from '../state/app'
 import { fmtDate, fmtMoney, fmtSigned } from '../lib/format'
-import { magnitude } from '../lib/workpaper/effect'
+import { netChange } from '../lib/workpaper/effect'
 import { AREA_BY_ID } from '../lib/packet/areas'
 import { reviewHref, filingHref } from '../lib/paths'
-import { useFindings, type ReviewedFinding } from '../features/findings'
+import { useFindings, isOpenIssue, type ReviewedFinding } from '../features/findings'
 import { readiness } from '../features/readiness'
 import { SEVERITY } from '../features/vocab'
 import { useTrace } from '../features/trace/useTrace'
@@ -35,7 +35,7 @@ export default function MapPage() {
 
   const { stats, landing } = useMemo(() => spineStats(m, d, findings), [m, d, findings])
   const steps = useMemo(() => readiness(m, d, findings, simNow), [m, d, findings, simNow])
-  const open = findings.filter((f) => f.status === 'open')
+  const open = findings.filter(isOpenIssue)
   const selected = findings.find((f) => f.id === fid)
   // Only dim the map when the issue actually lands somewhere on it.
   const lit = hover ?? fid
@@ -119,13 +119,17 @@ function Fig({ label, value }: { label: string; value: number }) {
 function Attention({ list, onPick, onHover }: { list: ReviewedFinding[]; onPick: (f: ReviewedFinding) => void; onHover: (id: string | null) => void }) {
   // The list unmounts without a mouseleave when an item is opened: never leave a hover behind.
   useEffect(() => () => onHover(null), [onHover])
-  const ranked = list.filter((f) => f.severity !== 'info').sort((a, b) => b.rank - a.rank)
-  const total = ranked.reduce((s, f) => s + magnitude(f.effect), 0)
+  const ranked = [...list].sort((a, b) => b.rank - a.rank)
+  // Fixes push in both directions, so show each instead of one blended total.
+  const fixes = ranked.filter((f) => f.severity !== 'judgment').map((f) => netChange(f.effect))
+  const more = fixes.filter((x) => x > 0).reduce((s, x) => s + x, 0)
+  const less = -fixes.filter((x) => x < 0).reduce((s, x) => s + x, 0)
+  const judgments = ranked.filter((f) => f.severity === 'judgment').length
   return (
     <aside className="flex h-full w-[min(340px,32vw)] shrink-0 flex-col border-l border-line bg-surface">
       <div className="border-b border-line px-4 py-3">
         <h2 className="font-display text-title font-bold">Needs attention</h2>
-        <p className="text-micro text-muted">{ranked.length} issues from independent checks, biggest first · about {fmtMoney(Math.round(total))} of tax at stake. Hover to see where each lands on the return.</p>
+        <p className="text-micro text-muted">{ranked.length} issues from independent checks, biggest first. Fixing the {ranked.length - judgments} errors and warnings would add about {fmtMoney(Math.round(more))} to what the household owes and take off about {fmtMoney(Math.round(less))} (federal plus California, estimate). {judgments} are judgment calls, shown with their cost if chosen. Hover to see where each lands.</p>
       </div>
       <ul className="pane min-h-0 flex-1 overflow-y-auto" onMouseLeave={() => onHover(null)}>
         {ranked.map((f, i) => (
@@ -137,7 +141,12 @@ function Attention({ list, onPick, onHover }: { list: ReviewedFinding[]; onPick:
                 <span className="block text-meta font-semibold leading-snug text-ink">{f.title}</span>
                 <span className="mt-0.5 flex items-center gap-1.5 text-micro text-muted"><StatusBadge vocab={SEVERITY} value={f.severity} />{AREA_BY_ID.get(f.area)?.label}</span>
               </span>
-              {magnitude(f.effect) >= 1 && <span className={cx('tnum shrink-0 text-meta font-semibold', (f.effect.fedTax || f.effect.fedBalance || f.effect.caTax) > 0 ? 'text-danger' : 'text-good')}>{fmtSigned(f.effect.fedTax || f.effect.fedBalance || f.effect.caTax || f.effect.caBalance)}</span>}
+              {Math.abs(netChange(f.effect)) >= 1 && (
+                <span title={f.severity === 'judgment' ? 'Change in federal plus California owed if this alternative is chosen (estimate)' : 'Change in federal plus California owed if fixed (estimate)'}
+                  className={cx('tnum shrink-0 text-right text-meta font-semibold leading-tight', f.severity === 'judgment' ? 'text-muted' : netChange(f.effect) > 0 ? 'text-danger' : 'text-good')}>
+                  {fmtSigned(netChange(f.effect))}{f.severity === 'judgment' && <span className="block text-[10px] font-medium">if chosen</span>}
+                </span>
+              )}
             </button>
           </li>
         ))}

@@ -7,6 +7,7 @@ import { effectText } from './tools'
 import { readiness } from '../readiness'
 import { AREA_BY_ID } from '../../lib/packet/areas'
 import { maskText } from '../Sensitive'
+import { isOpenIssue } from '../findings'
 
 export function buildContext(ctx: ToolCtx, me: Actor, where: { path: string; params: URLSearchParams }): string {
   const { m, d, findings, simNow } = ctx
@@ -39,9 +40,11 @@ export function buildContext(ctx: ToolCtx, me: Actor, where: { path: string; par
   out.push(`Steps to filing: ${steps.filter((s) => s.done).length} of ${steps.length} done. Not done: ${steps.filter((s) => !s.done).map((s) => `${s.name} (${s.detail})`).join('; ') || 'none'}.`)
   out.push(`Firm standards: adjustments with a tax effect over $${d.standards.partner_threshold.toLocaleString('en-US')} need partner sign-off; review levels ${d.standards.review_levels.join(', ')}. Team: preparer ${ctx.name(m.packet.firm.assignment_at_start.preparer)}, reviewer ${ctx.name(m.packet.firm.assignment_at_start.reviewer)}, partner ${ctx.name(m.packet.firm.assignment_at_start.partner)}.`)
 
-  const open = findings.filter((f) => f.status === 'open')
-  out.push(`\nOpen issues from the independent checks (${open.length}), biggest first. Use get_finding for detail:`)
+  const open = findings.filter(isOpenIssue)
+  out.push(`\nOpen issues from the independent checks (${open.length}), biggest first. Judgment calls are alternatives the engine did not choose; their effect is what choosing them would cost. Use get_finding for detail:`)
   for (const f of open) out.push(`- [finding:${f.id}] ${f.severity}: ${f.title} (${AREA_BY_ID.get(f.area)?.label ?? f.area}; ${effectText(f.effect)}; lines ${f.lines.slice(0, 4).join(', ')})`)
+  const notes = findings.filter((f) => f.status === 'open' && f.severity === 'info')
+  if (notes.length) out.push(`Informational notes (not counted as issues): ${notes.map((f) => `[finding:${f.id}] ${f.title}`).join('; ')}.`)
   const done = findings.filter((f) => f.status !== 'open')
   if (done.length) out.push(`Issues already handled: ${done.map((f) => `[finding:${f.id}] ${f.status}`).join(', ')}.`)
 
