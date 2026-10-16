@@ -5,6 +5,7 @@ import type { Derived } from '../lib/workpaper/derive'
 import { scopeSnapshot, hashOf } from '../lib/workpaper/derive'
 import { docStatus } from './documents/docStatus'
 import { evidenceDocs, type ReviewedFinding } from './findings'
+import { C, docHref, reviewHref, filingHref, schedulesHref } from '../lib/paths'
 
 export interface Step { name: string; done: boolean; detail: string; href?: string }
 
@@ -23,22 +24,22 @@ export function readiness(m: Model, d: Derived, findings: ReviewedFinding[], sim
   const variance = varianceLines(m, d.standards.variance_review).filter((k) => !d.notes.some((n) => n.refs.includes(k)) && !d.verifications.has(k))
 
   return [
-    { name: 'Engagement letter and consents signed', done: has('engagement_letter') && has('consent_7216'), detail: 'D01 and D02 are signed.', href: '/documents/D01' },
-    { name: 'Identity verified', done: m.packet.documents.filter((x) => x.document_type === 'identity_document' && x.received_at <= simNow).length >= 2, detail: 'Driver licenses on file for both spouses.', href: '/documents/D04' },
-    { name: 'Prior-year return reviewed', done: has('prior_year_return'), detail: 'The 2024 return and the prior preparer\'s file are in.', href: '/documents/D06' },
-    { name: 'All documents accounted for', done: loose === 0, detail: loose ? `${loose} documents not used or only partly read.` : 'Every document landed or has a reason.', href: '/documents' },
-    { name: 'Prior-year variances explained', done: variance.length === 0, detail: variance.length ? `${variance.length} swings over the firm threshold have no note.` : 'All swings explained.', href: '/return' },
-    { name: 'Carryovers agreed to prior year', done: carry.length > 0 && carryDone === carry.length, detail: `${carryDone} of ${carry.length} carryover lines verified.`, href: '/return?area=summary' },
-    { name: 'Estimated payments agreed to IRS and FTB records', done: pay.every((f) => f.status !== 'open'), detail: pay.some((f) => f.status === 'open') ? 'Payments disagree with agency records.' : 'Agreed.', href: '/review' },
-    { name: 'Due diligence completed', done: dd, detail: dd ? 'Form 8867 checklist recorded.' : 'Form 8867 for the child tax credit is not done.', href: '/review' },
-    { name: 'Diagnostics resolved', done: open.length === 0, detail: open.length ? `${open.length} findings still open.` : 'No open findings.', href: '/review' },
+    { name: 'Engagement letter and consents signed', done: has('engagement_letter') && has('consent_7216'), detail: 'D01 and D02 are signed.', href: docHref('D01') },
+    { name: 'Identity verified', done: m.packet.documents.filter((x) => x.document_type === 'identity_document' && x.received_at <= simNow).length >= 2, detail: 'Driver licenses on file for both spouses.', href: docHref('D04') },
+    { name: 'Prior-year return reviewed', done: has('prior_year_return'), detail: 'The 2024 return and the prior preparer\'s file are in.', href: docHref('D06') },
+    { name: 'All documents accounted for', done: loose === 0, detail: loose ? `${loose} documents not used or only partly read.` : 'Every document landed or has a reason.', href: C('/documents') },
+    { name: 'Prior-year variances explained', done: variance.length === 0, detail: variance.length ? `${variance.length} swings over the firm threshold have no note.` : 'All swings explained.', href: schedulesHref('?r=variance') },
+    { name: 'Carryovers agreed to prior year', done: carry.length > 0 && carryDone === carry.length, detail: `${carryDone} of ${carry.length} carryover lines verified.`, href: schedulesHref('?r=carryovers') },
+    { name: 'Estimated payments agreed to IRS and FTB records', done: pay.every((f) => f.status !== 'open'), detail: pay.some((f) => f.status === 'open') ? 'Payments disagree with agency records.' : 'Agreed.', href: reviewHref() },
+    { name: 'Due diligence completed', done: dd, detail: dd ? 'Form 8867 checklist recorded.' : 'Form 8867 for the child tax credit is not done.', href: reviewHref() },
+    { name: 'Diagnostics resolved', done: open.length === 0, detail: open.length ? `${open.length} findings still open.` : 'No open findings.', href: reviewHref() },
     { name: 'Reviewer sign-off', done: signed('reviewer'), detail: signed('reviewer') ? 'Signed and current.' : 'Not signed (or reopened by a change).' },
     { name: 'Partner sign-off', done: signed('partner'), detail: signed('partner') ? 'Signed and current.' : 'Not signed (or reopened by a change).' },
     {
       name: 'Client approval and e-file authorization',
       done: d.filing.clientApproval?.payload.hash === now,
       detail: !d.filing.clientApproval ? 'Form 8879 not yet signed.' : d.filing.clientApproval.payload.hash === now ? 'Signed by the client for this exact return.' : 'Stale: the return changed after the client signed.',
-      href: '/filing',
+      href: filingHref(),
     },
   ]
 }

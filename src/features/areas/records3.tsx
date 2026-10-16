@@ -14,6 +14,7 @@ import { DOC_STATUS, FINDING_STATUS, ADJ_STATUS, SIGNOFF_STATE } from '../vocab'
 import { useTrace } from '../trace/useTrace'
 import { signoffState } from '../Signoffs'
 import { Rec, Block, LV, n0 } from './common'
+import { C, schedulesHref } from '../../lib/paths'
 
 /* ---------- Variance vs last year ---------- */
 
@@ -147,7 +148,7 @@ export function Completeness() {
   ]
   return (
     <Rec title="Completeness" intro="Proof that nothing was missed: every document used or explained, every area considered and signed, every outside filing identified.">
-      <Block title={`Every document (${m.packet.documents.length})`} right={<button onClick={() => nav('/documents')} className="text-micro font-semibold text-accent hover:underline">Open documents</button>}>
+      <Block title={`Every document (${m.packet.documents.length})`} right={<button onClick={() => nav(C('/documents'))} className="text-micro font-semibold text-accent hover:underline">Open documents</button>}>
         <div className="flex flex-wrap gap-2 p-4">{counts.map(([k, n]) => <StatusBadge key={k} vocab={DOC_STATUS} value={k} suffix={n} />)}</div>
       </Block>
       <Block title="Every area">
@@ -156,7 +157,7 @@ export function Completeness() {
           <tbody>{AREAS.map((a) => {
             const s = signoffState(m, d, a.id)
             return (
-              <Tr key={a.id} onClick={() => nav(`/return?area=${a.id}`)}>
+              <Tr key={a.id} onClick={() => nav(schedulesHref(`?area=${a.id}`))}>
                 <Td>{a.label}</Td><Td num>{m.current.order.filter((k) => areaOf(k) === a.id).length}</Td>
                 <Td num>{findings.filter((f) => f.area === a.id && f.status === 'open').length || <span className="text-faint">0</span>}</Td>
                 {s.levels.map((l) => <Td key={l.level}><StatusBadge vocab={SIGNOFF_STATE} value={l.state} /></Td>)}

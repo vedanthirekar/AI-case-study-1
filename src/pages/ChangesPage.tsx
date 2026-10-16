@@ -48,7 +48,7 @@ export default function ChangesPage() {
   )
 }
 
-function Activity() {
+export function Activity() {
   const m = useModel()
   const events = useApp((s) => s.events)
   const d = useDerived()
@@ -101,7 +101,7 @@ function Activity() {
   )
 }
 
-function Compare() {
+export function Compare() {
   const m = useModel()
   const d = useDerived()
   const { open } = useTrace()
@@ -164,7 +164,7 @@ function Compare() {
   )
 }
 
-function WhatIfs() {
+export function WhatIfs() {
   const m = useModel()
   const d = useDerived()
   const [openId, setOpenId] = useState<string | null>(null)

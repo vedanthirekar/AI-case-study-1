@@ -9,6 +9,7 @@ import { IndexedDbStore, MemoryStore, type EventStore } from '../lib/store/event
 import { derive, type Derived } from '../lib/workpaper/derive'
 import { newId, type Action, type WPEvent } from '../lib/workpaper/events'
 import { actorsOf, checkRules, type Actor, type Verdict } from '../lib/rules/rules'
+import { setClientId } from '../lib/paths'
 
 const LS = 'miraflores-workpaper:session'
 
@@ -65,6 +66,7 @@ export const useApp = create<AppState>((set, get) => ({
     try {
       const packet: Packet = await loadPacket()
       const model = buildModel(packet)
+      setClientId(packet.packet.client_id)
       let store: EventStore
       try { store = new IndexedDbStore(packet.packet.client_id); await store.load() } catch { store = new MemoryStore() }
       const events = await store.load()

@@ -7,6 +7,7 @@ import { fmtValue } from '../lib/format'
 import { useModel } from '../state/app'
 import { maskText } from './Sensitive'
 import { useTrace } from './trace/useTrace'
+import { traceHref } from '../lib/paths'
 
 export function RefChip({ id, compact = false, onOpenDoc, className = '' }: {
   id: string; compact?: boolean; className?: string
@@ -21,8 +22,8 @@ export function RefChip({ id, compact = false, onOpenDoc, className = '' }: {
 
   const go = () => {
     if (r.ref.kind === 'line' && r.found) {
-      if (/^\/(return|review|areas|changes|lineage)/.test(loc.pathname)) open(r.ref.id)
-      else nav(`/return?trace=${encodeURIComponent(r.ref.id)}`)
+      if (/^\/clients\/[^/]+(\/(review|schedules))?\/?$/.test(loc.pathname)) open(r.ref.id)
+      else nav(traceHref(r.ref.id))
       return
     }
     if (r.doc) { if (onOpenDoc) onOpenDoc(r.doc); else nav(r.href!) }

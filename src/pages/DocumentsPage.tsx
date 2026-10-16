@@ -11,6 +11,7 @@ import { docStatus, type DocState } from '../features/documents/docStatus'
 import DocumentViewer from '../features/documents/DocumentViewer'
 import { RefChip } from '../features/RefChip'
 import { useFindings, evidenceDocs } from '../features/findings'
+import { C, docHref, reviewHref } from '../lib/paths'
 
 const ORDER: DocState[] = ['partial', 'unused', 'used', 'evidence', 'duplicate', 'superseded', 'record', 'pending']
 
@@ -29,7 +30,7 @@ export default function DocumentsPage() {
   const statuses = useMemo(() => new Map(m.packet.documents.map((d) => [d.id, docStatus(m, d, simNow, evidence)])), [m, simNow, evidence])
   const current = id ? m.docs.get(id) : undefined
   useEffect(() => {
-    publish({ crumbs: [{ label: 'Documents', to: '/documents' }, ...(current ? [{ label: `${current.id} ${current.title}` }] : [])] })
+    publish({ crumbs: [{ label: 'Documents', to: C('/documents') }, ...(current ? [{ label: `${current.id} ${current.title}` }] : [])] })
   }, [publish, current])
 
   const query = q.trim().toLowerCase()
@@ -68,7 +69,7 @@ export default function DocumentsPage() {
                 {list.map((d) => {
                   const ds = statuses.get(d.id)!
                   return (
-                    <button key={d.id} onClick={() => nav(`/documents/${d.id}`)}
+                    <button key={d.id} onClick={() => nav(docHref(d.id))}
                       className={cx('flex w-full items-start gap-2.5 border-b border-line2 px-3 py-2 text-left transition',
                         d.id === id ? 'bg-accent-soft/60 shadow-[inset_2px_0_0_rgb(var(--c-accent))]' : 'hover:bg-slateSoft')}>
                       <Icon name="doc" size={15} className="mt-0.5 shrink-0 text-faint" />
@@ -118,7 +119,7 @@ export default function DocumentsPage() {
                 <section>
                   <div className="mb-1.5 text-micro font-bold uppercase tracking-wider text-faint">Cited by {citedBy.length} finding{citedBy.length > 1 ? 's' : ''}</div>
                   <ul className="space-y-1.5">{citedBy.map((f) => (
-                    <li key={f.id}><button onClick={() => nav(`/review?f=${encodeURIComponent(f.id)}`)} className="w-full rounded-lg border border-line2 bg-surface px-2.5 py-1.5 text-left text-meta transition hover:border-accent/50">{f.title}</button></li>
+                    <li key={f.id}><button onClick={() => nav(reviewHref(`?f=${encodeURIComponent(f.id)}`))} className="w-full rounded-lg border border-line2 bg-surface px-2.5 py-1.5 text-left text-meta transition hover:border-accent/50">{f.title}</button></li>
                   ))}</ul>
                 </section>
               )}

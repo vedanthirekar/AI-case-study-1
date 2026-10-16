@@ -10,6 +10,7 @@ import { useApp, useActor, useDerived, useModel } from '../../state/app'
 import { magnitude } from '../../lib/workpaper/effect'
 import { AREAS } from '../../lib/packet/areas'
 import { signoffState } from '../Signoffs'
+import { reviewHref, filingHref, schedulesHref } from '../../lib/paths'
 
 interface Note { id: string; icon: string; text: string; href: string }
 
@@ -24,27 +25,27 @@ export function useNotifications(): Note[] {
     const thr = d.standards.partner_threshold
     if (me.role === 'reviewer' || me.role === 'partner') {
       const mine = d.adjustments.filter((a) => a.status === 'proposed' && a.by !== me.id && (me.role === 'partner' || magnitude(a.effect) <= thr))
-      if (mine.length) out.push({ id: 'approve', icon: 'edit', text: `${mine.length} adjustment${mine.length > 1 ? 's' : ''} waiting for your approval`, href: '/review?tab=adjustments' })
+      if (mine.length) out.push({ id: 'approve', icon: 'edit', text: `${mine.length} adjustment${mine.length > 1 ? 's' : ''} waiting for your approval`, href: reviewHref('?tab=approvals') })
     }
     if (me.role === 'client') {
       const q = d.threads.filter((t) => t.to === 'client' && !t.answered)
-      if (q.length) out.push({ id: 'q-client', icon: 'chat', text: `${q.length} question${q.length > 1 ? 's' : ''} from your preparer`, href: '/client' })
-      if (d.signoffs.some((s) => s.scope === 'return' && s.level === 'partner') && !d.filing.clientApproval) out.push({ id: 'sign', icon: 'edit', text: 'Your return is ready to approve and sign', href: '/client' })
+      if (q.length) out.push({ id: 'q-client', icon: 'chat', text: `${q.length} question${q.length > 1 ? 's' : ''} from your preparer`, href: '/portal' })
+      if (d.signoffs.some((s) => s.scope === 'return' && s.level === 'partner') && !d.filing.clientApproval) out.push({ id: 'sign', icon: 'edit', text: 'Your return is ready to approve and sign', href: '/portal' })
       return out
     }
     const answers = d.threads.filter((t) => t.startedBy === me.id && t.answered && t.messages[t.messages.length - 1].by !== me.id)
-    if (answers.length) out.push({ id: 'answers', icon: 'chat', text: `${answers.length} answer${answers.length > 1 ? 's' : ''} to your questions`, href: '/review?tab=questions' })
+    if (answers.length) out.push({ id: 'answers', icon: 'chat', text: `${answers.length} answer${answers.length > 1 ? 's' : ''} to your questions`, href: reviewHref('?tab=discussion') })
     const toStaff = d.threads.filter((t) => t.to === 'staff' && !t.answered && t.startedBy !== me.id)
-    if (toStaff.length) out.push({ id: 'q-staff', icon: 'chat', text: `${toStaff.length} question${toStaff.length > 1 ? 's' : ''} from colleagues`, href: '/review?tab=questions' })
+    if (toStaff.length) out.push({ id: 'q-staff', icon: 'chat', text: `${toStaff.length} question${toStaff.length > 1 ? 's' : ''} from colleagues`, href: reviewHref('?tab=discussion') })
     for (const a of [...AREAS.map((x) => x.id), 'return']) {
       const st = signoffState(m, d, a)
-      for (const l of st.levels) if (l.state === 'reopened' && l.last?.by === me.id) out.push({ id: `re-${a}-${l.level}`, icon: 'refresh', text: `Your ${l.level} sign-off on ${AREAS.find((x) => x.id === a)?.label ?? 'the whole return'} reopened`, href: a === 'return' ? '/filing' : `/return?area=${a}` })
+      for (const l of st.levels) if (l.state === 'reopened' && l.last?.by === me.id) out.push({ id: `re-${a}-${l.level}`, icon: 'refresh', text: `Your ${l.level} sign-off on ${AREAS.find((x) => x.id === a)?.label ?? 'the whole return'} reopened`, href: a === 'return' ? filingHref() : schedulesHref(`?area=${a}`) })
     }
-    for (const [scope, x] of d.assignments) if (x.assignee === me.id) out.push({ id: `as-${scope}`, icon: 'user', text: `Assigned to you: ${AREAS.find((a) => a.id === scope)?.label ?? scope}${x.due ? `, due ${x.due}` : ''}`, href: `/return?area=${scope}` })
+    for (const [scope, x] of d.assignments) if (x.assignee === me.id) out.push({ id: `as-${scope}`, icon: 'user', text: `Assigned to you: ${AREAS.find((a) => a.id === scope)?.label ?? scope}${x.due ? `, due ${x.due}` : ''}`, href: schedulesHref(`?area=${scope}`) })
     const blocking = d.notes.filter((n) => n.blocking && !n.resolved && n.by !== me.id)
-    if (blocking.length && me.role === 'preparer') out.push({ id: 'blocking', icon: 'lock', text: `${blocking.length} blocking review note${blocking.length > 1 ? 's' : ''} to answer`, href: '/review?tab=notes' })
+    if (blocking.length && me.role === 'preparer') out.push({ id: 'blocking', icon: 'lock', text: `${blocking.length} blocking review note${blocking.length > 1 ? 's' : ''} to answer`, href: reviewHref('?tab=discussion') })
     const fresh = events.filter((e) => e.seq > lastSeen && e.actor !== me.id).length
-    if (fresh) out.push({ id: 'fresh', icon: 'history', text: `${fresh} change${fresh > 1 ? 's' : ''} by others since you last looked`, href: '/changes' })
+    if (fresh) out.push({ id: 'fresh', icon: 'history', text: `${fresh} change${fresh > 1 ? 's' : ''} by others since you last looked`, href: reviewHref('?tab=history') })
     return out
   }, [m, d, me, events, lastSeen])
 }

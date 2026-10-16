@@ -23,6 +23,7 @@ import { FINDING_STATUS } from '../features/vocab'
 import { usePeople } from '../features/people'
 import { LV } from '../features/areas/common'
 import { Attachments } from '../features/Attachments'
+import { filingHref, reviewHref } from '../lib/paths'
 
 /** Federal and California totals as the workpaper stands (engine + estimated adjustments). */
 export function useFinalFigures() {
@@ -67,7 +68,7 @@ export default function FilingPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-5 px-6 py-6">
       <PageHeader eyebrow="Filing and after" icon="send" title="Filing" subtitle={`${status} · season clock ${fmtDate(simNow)}`}
-        actions={<><Btn size="sm" onClick={() => nav('/filing/client-copy')}><Icon name="doc" size={13} />Client copy</Btn><Btn size="sm" onClick={() => nav('/filing/next-year')}><Icon name="arrow-right" size={13} />Next year</Btn></>} />
+        actions={<><Btn size="sm" onClick={() => nav(filingHref('/client-copy'))}><Icon name="doc" size={13} />Client copy</Btn><Btn size="sm" onClick={() => nav(filingHref('/next-year'))}><Icon name="arrow-right" size={13} />Next year</Btn></>} />
 
       <SignoffBar scope="return" label="Whole return" />
 
@@ -136,7 +137,7 @@ export default function FilingPage() {
                   <Td className="tnum">{fmtDateTime(x.date)}</Td>
                   <Td><span className="capitalize">{x.jurisdiction}</span> e-file <Tag tone={x.status === 'accepted' ? 'good' : x.status === 'rejected' ? 'danger' : 'muted'}>{x.status.replace('_', ' ')}</Tag></Td>
                   <Td className="text-micro">{x.errors?.map((e) => <div key={e.code}><span className="font-mono">{e.code}</span> {e.message}</div>)}
-                    {x.status === 'rejected' && ssnFinding && <div className="mt-1 flex items-center gap-1.5">The workpaper had flagged this: <button onClick={() => nav(`/review?f=${ssnFinding.id}`)} className="font-semibold text-accent hover:underline">{ssnFinding.title}</button> <StatusBadge vocab={FINDING_STATUS} value={ssnFinding.status} /></div>}
+                    {x.status === 'rejected' && ssnFinding && <div className="mt-1 flex items-center gap-1.5">The workpaper had flagged this: <button onClick={() => nav(reviewHref(`?f=${ssnFinding.id}`))} className="font-semibold text-accent hover:underline">{ssnFinding.title}</button> <StatusBadge vocab={FINDING_STATUS} value={ssnFinding.status} /></div>}
                     <span className="text-faint">Submission {x.submission_id}</span></Td>
                 </Tr>
               ))}
@@ -159,7 +160,7 @@ export default function FilingPage() {
               <div className="min-w-0 flex-1"><div className="font-semibold">{n.agency} {n.type} · tax year {n.tax_year} · dated {fmtDate(n.dated)}</div>
                 <div className="text-muted">{n.summary ?? n.items_under_examination?.join(' ')}</div>{n.status && <div className="text-micro text-good">{n.status}</div>}
                 {n.response_due && <div className="text-micro text-danger">Response due {fmtDate(n.response_due)}</div>}</div>
-              {n.items_under_examination && <Link to={`/filing/notice/${n.id}`} className="shrink-0 text-meta font-semibold text-accent hover:underline">Assemble response</Link>}
+              {n.items_under_examination && <Link to={filingHref(`/notice/${n.id}`)} className="shrink-0 text-meta font-semibold text-accent hover:underline">Assemble response</Link>}
             </li>
           ))}</ul>
         )}
@@ -261,7 +262,7 @@ export function ClientPortal() {
             </div>
           </div>
         )}
-        <Link to="/filing/client-copy" className="mt-3 inline-block text-meta font-semibold text-accent hover:underline">View your copy</Link>
+        <Link to="/portal/copy" className="mt-3 inline-block text-meta font-semibold text-accent hover:underline">View your copy</Link>
       </Card>
       <p className="text-micro text-faint">{m.packet.firm.name} · Questions? Reply above and your preparer will see it immediately.</p>
     </div>
@@ -276,7 +277,8 @@ export function ClientCopy() {
   const { publish } = useShell()
   const fig = useFinalFigures()
   const people = usePeople()
-  useEffect(() => { publish({ crumbs: [{ label: 'Filing', to: '/filing' }, { label: 'Client copy' }] }) }, [publish])
+  const me = useActor()
+  useEffect(() => { publish({ crumbs: [...(me.role === 'client' ? [] : [{ label: 'Filing', to: filingHref() }]), { label: 'Client copy' }] }) }, [publish, me.role])
   const h = m.packet.household
   const firm = m.packet.firm.firm_identity as { address: string; phone: string }
   const signer = m.staff.get(String(m.packet.firm.firm_identity.paid_preparer_signing_returns))
@@ -321,7 +323,7 @@ export function NoticeResponse() {
   const { id } = useParams()
   const { publish } = useShell()
   const n = m.packet.tax_agency_records.notices.find((x) => x.id === id)
-  useEffect(() => { publish({ crumbs: [{ label: 'Filing', to: '/filing' }, { label: `Response: ${n?.type ?? id}` }] }) }, [publish, n, id])
+  useEffect(() => { publish({ crumbs: [{ label: 'Filing', to: filingHref() }, { label: `Response: ${n?.type ?? id}` }] }) }, [publish, n, id])
   if (!n) return <div className="p-6 text-body text-muted">Notice not found.</div>
   const items = n.items_under_examination ?? []
   const nec = docsOfType(m, '1099-NEC').map((x) => ({ doc: x, ev: evByField(m, x.id, 'box1') }))
@@ -385,7 +387,7 @@ export function NextYear() {
   const findings = useFindings()
   const { publish } = useShell()
   const fig = useFinalFigures()
-  useEffect(() => { publish({ crumbs: [{ label: 'Filing', to: '/filing' }, { label: '2026 rollforward' }] }) }, [publish])
+  useEffect(() => { publish({ crumbs: [{ label: 'Filing', to: filingHref() }, { label: '2026 rollforward' }] }) }, [publish])
   const pr = m.packet.planning_reference_2026 as { federal_estimate_due_dates: string[]; california_estimate_due_dates: string[]; california_installment_percentages: number[]; federal_safe_harbor: string; california_safe_harbor: string; known_2026_changes_for_this_household: string[] }
   const fedQ = Math.ceil((fig.fedTax * 1.1) / 4 / 10) * 10
   const caTotal = Math.round(fig.caTax * 1.1)

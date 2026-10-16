@@ -25,8 +25,9 @@ import DocumentViewer from '../documents/DocumentViewer'
 import { useTrace } from './useTrace'
 import { ThreadList, AskForm } from '../Threads'
 import { Attachments } from '../Attachments'
+import { lineageHref } from '../../lib/paths'
 
-type Tab = 'built' | 'source' | 'review' | 'history' | 'notes' | 'related'
+type Tab = 'built' | 'source' | 'review' | 'notes'
 
 export default function TracePanel({ lineKey }: { lineKey: string }) {
   const m = useModel()
@@ -62,12 +63,10 @@ export default function TracePanel({ lineKey }: { lineKey: string }) {
         </div>
       }>
       <Tabs variant="fill" value={tab} onChange={(k) => setTab(k as Tab)} items={[
-        { key: 'built', label: 'Built', icon: 'route' },
+        { key: 'built', label: 'How built', icon: 'route' },
         { key: 'source', label: 'Source', icon: 'doc' },
-        { key: 'review', label: 'Review', icon: 'check', count: verifs.length },
-        { key: 'history', label: 'History', icon: 'history', count: (d.adjByLine.get(lineKey) ?? []).length },
-        { key: 'notes', label: 'Notes', icon: 'note', count: notes.filter((n) => !n.resolved).length, countTone: 'warn' },
-        { key: 'related', label: 'Related', icon: 'link' },
+        { key: 'review', label: 'Review', icon: 'check', count: verifs.length + (d.adjByLine.get(lineKey) ?? []).length },
+        { key: 'notes', label: 'Discussion', icon: 'chat', count: notes.filter((n) => !n.resolved).length + d.threads.filter((t) => t.refs.includes(lineKey) && !t.answered).length, countTone: 'warn' },
       ]} />
       <div className="pane min-h-0 flex-1 overflow-y-auto p-4">
         {(byLine.get(lineKey) ?? []).map((f) => (
@@ -78,10 +77,8 @@ export default function TracePanel({ lineKey }: { lineKey: string }) {
         ))}
         {tab === 'built' && <Built lineKey={lineKey} onSource={() => setTab('source')} />}
         {tab === 'source' && <Source lineKey={lineKey} />}
-        {tab === 'review' && <Review lineKey={lineKey} />}
-        {tab === 'history' && <History lineKey={lineKey} />}
+        {tab === 'review' && <><Review lineKey={lineKey} /><History lineKey={lineKey} /><Related lineKey={lineKey} /></>}
         {tab === 'notes' && <Notes lineKey={lineKey} />}
-        {tab === 'related' && <Related lineKey={lineKey} />}
       </div>
     </PanelShell>
   )
@@ -99,7 +96,7 @@ function PanelShell({ title, sub, right, onClose, children, graphKey }: { title:
         </div>
         {right}
         {graphKey && (
-          <button onClick={() => nav(`/lineage?k=${encodeURIComponent(graphKey)}&trace=${encodeURIComponent(graphKey)}`)} title="See this number's lineage as a graph"
+          <button onClick={() => nav(lineageHref(graphKey))} title="See this number's lineage as a graph"
             className="flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-micro font-semibold text-muted transition hover:border-accent hover:text-accent">
             <Icon name="route" size={13} />Graph
           </button>

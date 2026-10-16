@@ -20,6 +20,8 @@ import { EffectLine } from '../features/trace/TracePanel'
 import DocumentViewer from '../features/documents/DocumentViewer'
 import { usePeople } from '../features/people'
 import { ThreadList, AskForm } from '../features/Threads'
+import { Activity, Compare, WhatIfs } from './ChangesPage'
+import { traceHref } from '../lib/paths'
 
 type StatusFilter = 'open' | 'all' | 'done'
 
@@ -33,7 +35,11 @@ export default function ReviewPage() {
   const findings = useFindings()
   const d = useDerived()
   const [params, setParams] = useSearchParams()
-  const [tab, setTab] = useState<'findings' | 'adjustments' | 'questions' | 'notes'>((params.get('tab') as 'adjustments') ?? 'findings')
+  type Tab = 'findings' | 'approvals' | 'discussion' | 'history'
+  const fromParam = (t: string | null): Tab => (t === 'adjustments' ? 'approvals' : t === 'questions' || t === 'notes' ? 'discussion' : (t as Tab) ?? 'findings')
+  const [tab, setTabState] = useState<Tab>(fromParam(params.get('tab')))
+  const setTab = (t: Tab) => { setTabState(t); setParams((p) => { const n = new URLSearchParams(p); n.set('tab', t); n.delete('f'); return n }) }
+  useEffect(() => { setTabState(fromParam(params.get('tab'))) }, [params]) // eslint-disable-line react-hooks/exhaustive-deps
   const [status, setStatus] = useState<StatusFilter>('open')
   const [area, setArea] = useState('all')
   const [sev, setSev] = useState('all')
@@ -42,7 +48,7 @@ export default function ReviewPage() {
   const [bulkReason, setBulkReason] = useState('')
   const sel = params.get('f')
 
-  useEffect(() => { publish({ crumbs: [{ label: 'Review inbox' }] }) }, [publish])
+  useEffect(() => { publish({ crumbs: [{ label: 'Review' }] }) }, [publish])
 
   const shown = findings.filter((f) =>
     (status === 'all' || (status === 'open' ? f.status === 'open' : f.status !== 'open')) &&
@@ -63,34 +69,31 @@ export default function ReviewPage() {
         <div className={cx('mx-auto space-y-4 px-6 py-5', selected ? 'max-w-none' : 'max-w-5xl')}>
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <div className="text-meta font-semibold uppercase tracking-wide text-accent">Independent checks · engine {useModel().current.v.version}</div>
-              <h1 className="font-display text-display font-bold">Review inbox</h1>
-              <p className="text-body text-muted">What our own checks found that the engine did not, ranked by tax at risk. Nothing changes until someone accepts it.</p>
+              <h1 className="font-display text-display font-bold">Review</h1>
+              <p className="text-body text-muted">
+                {open.length} open findings from independent checks. Accepting every proposed fix would move federal tax by <b className="tnum">{fmtSigned(ifAccepted.fedTax)}</b> and California tax by <b className="tnum">{fmtSigned(ifAccepted.caTax)}</b>.
+              </p>
             </div>
             <Tooltip label="What the badges mean" side="bottom-end"><button onClick={() => setLegend((x) => !x)} className="grid h-8 w-8 place-items-center rounded-lg border border-line text-muted hover:text-ink"><Icon name="help" size={15} /></button></Tooltip>
           </div>
           {legend && <div className="grid gap-3 md:grid-cols-2"><StatusLegend vocab={SEVERITY} title="Severity" columns={1} /><StatusLegend vocab={FINDING_STATUS} title="Status" columns={1} /></div>}
 
-          <div className="grid gap-3 sm:grid-cols-4">
-            <Stat label="Open findings" value={String(open.length)} tone={open.length ? 'warn' : 'good'} />
-            <Stat label="Block filing" value={String(open.filter((f) => f.blocksFiling || f.severity === 'error').length)} tone="danger" />
-            <Stat label="Federal tax if open fixes accepted" value={fmtSigned(ifAccepted.fedTax)} sub={`balance ${fmtSigned(ifAccepted.fedBalance)}`} />
-            <Stat label="California tax if open fixes accepted" value={fmtSigned(ifAccepted.caTax)} sub={`balance ${fmtSigned(ifAccepted.caBalance)}`} />
-          </div>
-
-          <Tabs value={tab} onChange={(k) => setTab(k as typeof tab)} items={[
+          <Tabs value={tab} onChange={(k) => setTab(k as Tab)} items={[
             { key: 'findings', label: 'Findings', icon: 'alert', count: open.length, countTone: 'warn' },
-            { key: 'adjustments', label: 'Adjustments to approve', icon: 'edit', count: pending.length },
-            { key: 'questions', label: 'Questions', icon: 'chat', count: d.threads.filter((t) => !t.answered).length, countTone: 'warn' },
-            { key: 'notes', label: 'Review notes', icon: 'note', count: d.notes.filter((n) => n.blocking && !n.resolved).length, countTone: 'warn' },
+            { key: 'approvals', label: 'Approvals', icon: 'edit', count: pending.length },
+            { key: 'discussion', label: 'Questions and notes', icon: 'chat', count: d.threads.filter((t) => !t.answered).length + d.notes.filter((n) => n.blocking && !n.resolved).length, countTone: 'warn' },
+            { key: 'history', label: 'History', icon: 'history' },
           ]} />
-          {tab === 'questions' && (
-            <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-              <ThreadList empty="No questions yet. Ask one from any line's trace (Notes tab) or here." />
-              <Card className="p-4"><div className="mb-2 font-display text-title font-bold">Ask a question</div><AskForm refs={[]} compact /></Card>
+          {tab === 'discussion' && (
+            <div className="space-y-5">
+              <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+                <ThreadList empty="No questions yet. Ask one from any number's trace or here." />
+                <Card className="p-4"><div className="mb-2 font-display text-title font-bold">Ask a question</div><AskForm refs={[]} compact /></Card>
+              </div>
+              <div><div className="mb-2 font-display text-title font-bold">Review notes</div><NotesList /></div>
             </div>
           )}
-          {tab === 'notes' && <NotesList />}
+          {tab === 'history' && <HistoryTab />}
 
           {tab === 'findings' && (
             <>
@@ -144,7 +147,7 @@ export default function ReviewPage() {
             </>
           )}
 
-          {tab === 'adjustments' && <AdjustmentQueue />}
+          {tab === 'approvals' && <AdjustmentQueue />}
         </div>
       </div>
       {tab === 'findings' && selected && <FindingDetail f={selected} onClose={() => setParams((p) => { const n = new URLSearchParams(p); n.delete('f'); return n })} />}
@@ -152,7 +155,7 @@ export default function ReviewPage() {
   )
 }
 
-function FindingDetail({ f, onClose }: { f: ReviewedFinding; onClose: () => void }) {
+export function FindingDetail({ f, onClose }: { f: ReviewedFinding; onClose: () => void }) {
   const m = useModel()
   const d = useDerived()
   const nav = useNavigate()
@@ -187,7 +190,7 @@ function FindingDetail({ f, onClose }: { f: ReviewedFinding; onClose: () => void
             <Head>Proposed {f.proposals.length > 1 ? `adjustments (${f.proposals.length})` : 'adjustment'}</Head>
             <div className="overflow-hidden rounded-lg border border-line2">
               {f.proposals.map((p) => (
-                <button key={p.lineKey} onClick={() => nav(`/return?trace=${encodeURIComponent(p.lineKey)}`)} className="block w-full border-b border-line2 px-3 py-2 text-left text-meta transition last:border-0 hover:bg-slateSoft">
+                <button key={p.lineKey} onClick={() => nav(traceHref(p.lineKey))} className="block w-full border-b border-line2 px-3 py-2 text-left text-meta transition last:border-0 hover:bg-slateSoft">
                   <div className="flex items-center gap-2"><span className="font-mono text-micro text-accent">{p.lineKey}</span>
                     <span className="tnum ml-auto">{fmtValue(p.from)} → <b>{fmtValue(p.to)}</b></span></div>
                   <div className="text-muted">{p.reason}</div>
@@ -283,7 +286,7 @@ function AdjustmentQueue() {
           const p = people(a.by)
           return (
             <Tr key={a.id}>
-              <Td mono><button onClick={() => nav(`/return?trace=${encodeURIComponent(a.lineKey)}`)} className="text-accent hover:underline">{a.lineKey}</button></Td>
+              <Td mono><button onClick={() => nav(traceHref(a.lineKey))} className="text-accent hover:underline">{a.lineKey}</button></Td>
               <Td>
                 <div className="tnum">{fmtValue(a.from)} → <b>{fmtValue(a.to)}</b></div>
                 <div className="text-micro text-muted">{a.reason}</div>
@@ -308,6 +311,18 @@ function AdjustmentQueue() {
   )
 }
 
+function HistoryTab() {
+  const [view, setView] = useState<'activity' | 'compare' | 'whatif'>('activity')
+  return (
+    <div className="space-y-3">
+      <Seg value={view} onChange={(v) => setView(v as typeof view)} items={[['activity', 'Activity since you last looked'], ['compare', 'Compare versions'], ['whatif', 'What-ifs']]} />
+      {view === 'activity' && <Activity />}
+      {view === 'compare' && <Compare />}
+      {view === 'whatif' && <WhatIfs />}
+    </div>
+  )
+}
+
 function NotesList() {
   const d = useDerived()
   const people = usePeople()
@@ -318,7 +333,7 @@ function NotesList() {
     <Table dense>
       <thead><tr><Th>On</Th><Th>Note</Th><Th className="w-40">State</Th></tr></thead>
       <tbody>{list.map((n) => (
-        <Tr key={n.id} onClick={() => n.refs[0] && nav(`/return?trace=${encodeURIComponent(n.refs[0])}`)}>
+        <Tr key={n.id} onClick={() => n.refs[0] && nav(traceHref(n.refs[0]))}>
           <Td mono>{n.refs[0]}</Td>
           <Td><div className="text-ink">{n.text}</div><div className="text-micro text-muted">{people(n.by).name} · {fmtDateTime(n.at)}{n.resolved && ` · resolved by ${people(n.resolved.by).name}: ${n.resolved.resolution}`}</div></Td>
           <Td>{n.resolved ? <StatusBadge vocab={FINDING_STATUS} value="resolved" /> : n.blocking ? <span className="text-micro font-semibold text-danger">Blocks filing</span> : <span className="text-micro text-muted">Open</span>}</Td>
@@ -332,15 +347,6 @@ function Head({ children }: { children: React.ReactNode }) {
   return <div className="mb-1.5 text-micro font-bold uppercase tracking-wider text-faint">{children}</div>
 }
 
-function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: 'warn' | 'danger' | 'good' }) {
-  return (
-    <Card className="p-3">
-      <div className="text-micro font-bold uppercase tracking-wider text-faint">{label}</div>
-      <div className={cx('tnum mt-1 text-display font-semibold', tone === 'warn' && 'text-warn', tone === 'danger' && 'text-danger', tone === 'good' && 'text-good')}>{value}</div>
-      {sub && <div className="tnum text-micro text-muted">{sub}</div>}
-    </Card>
-  )
-}
 
 function EffectNum({ n }: { n: number }) {
   if (!Math.round(n)) return <span className="text-faint">-</span>

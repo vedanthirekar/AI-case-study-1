@@ -3,6 +3,7 @@
 // same way and always knows where it points.
 import type { Model } from './model'
 import { getPointer } from './model'
+import { C } from '../paths'
 
 export type RefKind =
   | 'line' | 'ev' | 'doc' | 'docPage' | 'qa' | 'msg' | 'call' | 'py' | 'agency'
@@ -70,7 +71,7 @@ export function resolveRef(m: Model, raw: string): Resolved {
       const d = m.docs.get(e.document_id)
       return {
         ...base, title: e.label, sub: `${e.document_id} page ${e.page} - ${d?.title ?? ''}`, value: e.value,
-        href: `/documents/${e.document_id}?page=${e.page}&ev=${e.id}`, doc: { id: e.document_id, page: e.page, ev: e.id },
+        href: C(`/documents/${e.document_id}?page=${e.page}&ev=${e.id}`), doc: { id: e.document_id, page: e.page, ev: e.id },
       }
     }
     case 'doc':
@@ -78,7 +79,7 @@ export function resolveRef(m: Model, raw: string): Resolved {
       const d = m.docs.get(ref.id)
       if (!d) return { ...base, title: ref.id, sub: 'Unknown document', found: false }
       const page = ref.page ?? 1
-      return { ...base, title: d.title, sub: ref.page ? `${d.id} page ${page} (not extracted)` : `${d.id} - ${d.issuer}`, href: `/documents/${d.id}?page=${page}`, doc: { id: d.id, page } }
+      return { ...base, title: d.title, sub: ref.page ? `${d.id} page ${page} (not extracted)` : `${d.id} - ${d.issuer}`, href: C(`/documents/${d.id}?page=${page}`), doc: { id: d.id, page } }
     }
     case 'qa': {
       const q = m.qa.get(ref.id)

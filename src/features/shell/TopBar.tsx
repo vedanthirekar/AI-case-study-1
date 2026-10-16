@@ -12,6 +12,7 @@ import { usePeople } from '../people'
 import { useFindings } from '../findings'
 import { useToast } from '../../components/Toast'
 import { seedEvents, SEED_SIM_NOW } from '../../lib/demo/seed'
+import { reviewHref, traceHref, docHref } from '../../lib/paths'
 
 export function RoleSwitcher() {
   const actors = useApp((s) => s.actors)
@@ -96,16 +97,16 @@ export function GlobalSearch() {
   const search = (q: string): PaletteItem[] => {
     const s = q.toLowerCase()
     const out: PaletteItem[] = []
-    for (const f of findings) if (f.title.toLowerCase().includes(s)) out.push({ id: f.id, group: 'Findings', icon: 'alert', label: f.title, sub: f.check, onSelect: () => nav(`/review?f=${encodeURIComponent(f.id)}`) })
+    for (const f of findings) if (f.title.toLowerCase().includes(s)) out.push({ id: f.id, group: 'Findings', icon: 'alert', label: f.title, sub: f.check, onSelect: () => nav(reviewHref(`?f=${encodeURIComponent(f.id)}`)) })
     for (const k of m.current.order) {
       const l = m.current.lines.get(k)!
-      if (k.toLowerCase().includes(s) || l.label.toLowerCase().includes(s)) out.push({ id: k, group: 'Return lines', icon: 'grid', label: l.label, sub: k, hint: fmtValue(l.value), onSelect: () => nav(`/return?trace=${encodeURIComponent(k)}`) })
+      if (k.toLowerCase().includes(s) || l.label.toLowerCase().includes(s)) out.push({ id: k, group: 'Return lines', icon: 'grid', label: l.label, sub: k, hint: fmtValue(l.value), onSelect: () => nav(traceHref(k)) })
       if (out.length > 60) break
     }
-    for (const d of m.packet.documents) if (`${d.id} ${d.title} ${d.issuer}`.toLowerCase().includes(s)) out.push({ id: d.id, group: 'Documents', icon: 'doc', label: d.title, sub: `${d.id} · ${d.document_type}`, onSelect: () => nav(`/documents/${d.id}`) })
+    for (const d of m.packet.documents) if (`${d.id} ${d.title} ${d.issuer}`.toLowerCase().includes(s)) out.push({ id: d.id, group: 'Documents', icon: 'doc', label: d.title, sub: `${d.id} · ${d.document_type}`, onSelect: () => nav(docHref(d.id)) })
     for (const e of m.packet.extracted_values) {
       if (out.length > 120) break
-      if (e.id === s || (typeof e.value === 'string' && e.value.toLowerCase().includes(s) && !['ssn', 'account_number'].includes(e.value_type))) out.push({ id: e.id, group: 'Document values', icon: 'doc', label: `${e.label}: ${e.value}`, sub: `${e.document_id} p${e.page} · ${e.id}`, onSelect: () => nav(`/documents/${e.document_id}?ev=${e.id}`) })
+      if (e.id === s || (typeof e.value === 'string' && e.value.toLowerCase().includes(s) && !['ssn', 'account_number'].includes(e.value_type))) out.push({ id: e.id, group: 'Document values', icon: 'doc', label: `${e.label}: ${e.value}`, sub: `${e.document_id} p${e.page} · ${e.id}`, onSelect: () => nav(docHref(e.document_id, `?ev=${e.id}`)) })
     }
     for (const x of [...m.packet.client.questionnaire.map((q2) => ({ id: q2.id, t: `${q2.question} ${q2.answer}` })), ...m.packet.client.messages.map((x2) => ({ id: x2.id, t: x2.text }))]) {
       if (x.t.toLowerCase().includes(s)) out.push({ id: x.id, group: 'Client answers and messages', icon: 'chat', label: x.t.slice(0, 90), sub: x.id })

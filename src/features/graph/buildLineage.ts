@@ -18,7 +18,7 @@ export type NodeData = LineData | EvData | RefData | MoreData
 
 export interface LineageOptions { up: number; down: number; cap: number }
 
-const SIZE: Record<NodeData['kind'], [number, number]> = { line: [230, 64], ev: [230, 58], ref: [210, 50], more: [150, 36] }
+const SIZE: Record<NodeData['kind'], [number, number]> = { line: [210, 64], ev: [210, 58], ref: [200, 50], more: [140, 36] }
 const MAX_NODES = 220
 
 export function buildLineage(m: Model, d: Derived, byLine: Map<string, ReviewedFinding[]>, focus: string, o: LineageOptions) {
@@ -106,7 +106,7 @@ export function buildLineage(m: Model, d: Derived, byLine: Map<string, ReviewedF
 
   // Left-to-right layout: sources, inputs, the number, what it feeds.
   const g = new dagre.graphlib.Graph()
-  g.setGraph({ rankdir: 'LR', nodesep: 14, ranksep: 64, marginx: 20, marginy: 20 })
+  g.setGraph({ rankdir: 'LR', nodesep: 12, ranksep: 40, marginx: 10, marginy: 10 })
   g.setDefaultEdgeLabel(() => ({}))
   for (const n of nodes.values()) { const [w, h] = SIZE[n.data.kind]; g.setNode(n.id, { width: w, height: h }) }
   for (const e of edges.values()) g.setEdge(e.source, e.target)

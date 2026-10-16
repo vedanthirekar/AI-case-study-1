@@ -1,7 +1,5 @@
-// The return, by review area. Every number opens its trace beside the list.
-import { Fragment, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { useShell } from '../components/shell/ShellContext'
+// The return's lines for one review area, with its sign-off. Used inside Schedules.
+import { Fragment, useMemo, useState } from 'react'
 import { Table, Th, Tr, Td, TGroup } from '../components/Table'
 import StatusBadge, { StatusLegend } from '../components/StatusBadge'
 import { Icon, Tooltip, cx } from '../components/ui'
@@ -13,28 +11,18 @@ import { useFindings, findingsByLine } from '../features/findings'
 import { lineState } from '../features/lineStatus'
 import { LINE_STATE } from '../features/vocab'
 import { useTrace } from '../features/trace/useTrace'
-import TracePanel from '../features/trace/TracePanel'
 import SignoffBar from '../features/Signoffs'
 
 /** Forms with many detail lines show totals first; detail expands on request. */
 const DETAIL_FORMS = new Set(['F8949'])
 
-export default function ReturnPage() {
+/** Per-area line counts for navigation badges. */
+export function useAreaCounts() {
   const m = useModel()
   const d = useDerived()
   const findings = useFindings()
   const byLine = useMemo(() => findingsByLine(findings), [findings])
-  const { publish } = useShell()
-  const { key: traceKey, open } = useTrace()
-  const [params, setParams] = useSearchParams()
-  const area = params.get('area') ?? (traceKey ? areaOf(traceKey) : 'summary')
-  const [q, setQ] = useState('')
-  const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  const [legend, setLegend] = useState(false)
-
-  useEffect(() => { publish({ crumbs: [{ label: 'Return', to: '/return' }, { label: AREAS.find((a) => a.id === area)?.label ?? area }] }) }, [publish, area])
-
-  const counts = useMemo(() => {
+  return useMemo(() => {
     const c = new Map<string, { lines: number; flagged: number; verified: number }>()
     for (const k of m.current.order) {
       const a = areaOf(k)
@@ -45,6 +33,19 @@ export default function ReturnPage() {
     }
     return c
   }, [m, d, byLine])
+}
+
+/** One area's lines, its sign-off, and a search across all lines. Every number opens its trace. */
+export function AreaLines({ area }: { area: string }) {
+  const m = useModel()
+  const d = useDerived()
+  const findings = useFindings()
+  const byLine = useMemo(() => findingsByLine(findings), [findings])
+  const counts = useAreaCounts()
+  const { key: traceKey, open } = useTrace()
+  const [q, setQ] = useState('')
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [legend, setLegend] = useState(false)
 
   const query = q.trim().toLowerCase()
   const keys = m.current.order.filter((k) => query
@@ -61,31 +62,12 @@ export default function ReturnPage() {
   }
   const py = m.packet.prior_years.return_2024.lines
 
-  const setArea = (a: string) => setParams((p) => { const n = new URLSearchParams(p); n.set('area', a); return n })
-
   return (
-    <div className="flex h-full min-h-0">
-      <nav className="pane hidden w-56 shrink-0 overflow-y-auto border-r border-line bg-surface p-2 lg:block">
-        <div className="px-2 pb-1 pt-1 text-micro font-bold uppercase tracking-wider text-faint">Areas</div>
-        {AREAS.map((a) => {
-          const c = counts.get(a.id)
-          return (
-            <button key={a.id} onClick={() => setArea(a.id)}
-              className={cx('flex w-full items-center gap-2 rounded-sm px-2.5 py-2 text-left text-body transition',
-                a.id === area && !query ? 'bg-accent-soft/70 text-accent shadow-[inset_2px_0_0_rgb(var(--c-accent))]' : 'text-muted hover:bg-slateSoft hover:text-ink')}>
-              <Icon name={a.icon} size={15} />
-              <span className="min-w-0 flex-1 truncate">{a.label}</span>
-              {c && c.flagged > 0 && <span className="tnum text-micro font-semibold text-warn">{c.flagged}</span>}
-            </button>
-          )
-        })}
-      </nav>
-
-      <div className="pane min-w-0 flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-5xl px-6 py-5">
+    <div>
+        <div>
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <div className="text-meta font-semibold uppercase tracking-wide text-accent">Return · engine {m.current.v.version}</div>
+              <div className="text-meta font-semibold uppercase tracking-wide text-accent">Area · lines on the return · engine {m.current.v.version}</div>
               <h1 className="font-display text-display font-bold">{query ? `Lines matching "${q}"` : AREAS.find((a) => a.id === area)?.label}</h1>
               {!query && counts.get(area) && (
                 <p className="text-body text-muted">{counts.get(area)!.lines} lines · {counts.get(area)!.verified} verified · {counts.get(area)!.flagged} flagged. Click any number to trace it.</p>
@@ -150,9 +132,6 @@ export default function ReturnPage() {
             </tbody>
           </Table>
         </div>
-      </div>
-
-      {traceKey && <TracePanel lineKey={traceKey} />}
     </div>
   )
 }
