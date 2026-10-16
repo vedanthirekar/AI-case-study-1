@@ -82,7 +82,7 @@ function StartHere({ onOpen }: { onOpen: () => void }) {
   if (hidden) return null
   const hide = () => { setHidden(true); try { localStorage.setItem(HIDE_KEY, '1') } catch { /* private mode: hidden for this visit */ } }
   const steps: [string, string, string][] = [
-    ['play', 'Start with sample work', 'The button below opens a return halfway through review, with you as Daniel the reviewer. Start over any time from the reset icon at top right.'],
+    ['play', 'Start with sample work', 'The button below opens a return halfway through review. Start over any time from the reset icon at top right.'],
     ['route', 'Read the map', 'The map shows the return from income to what is owed, with problems where they hit. Click any number to see where it came from.'],
     ['users', 'Switch people', 'Use the menu at top right to work as a preparer, reviewer, partner, new hire or the client. Anything you cannot do is greyed out, with the reason.'],
     ['clock', 'Change the date', 'Use the date at the top to move through tax season: new documents arrive, the return is filed, and letters come back from the IRS.'],

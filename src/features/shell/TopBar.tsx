@@ -130,14 +130,14 @@ export function useLoadDemo() {
   const resetDemo = useApp((s) => s.resetDemo)
   const appendRaw = useApp((s) => s.appendRaw)
   const setSimNow = useApp((s) => s.setSimNow)
-  const setActor = useApp((s) => s.setActor)
   const m = useModel()
   const toast = useToast()
+  // Keeps whoever is acting: the sample work is the same whichever role views it.
   return async () => {
     await resetDemo()
     await appendRaw(seedEvents(m))
-    setSimNow(SEED_SIM_NOW); setActor('st-02')
-    toast({ title: 'Mid-season demo loaded', body: 'A week of review work. You are Daniel (reviewer) on June 26, 2026.' })
+    setSimNow(SEED_SIM_NOW)
+    toast({ title: 'Sample work loaded', body: 'A return halfway through review, as of June 26, 2026.' })
   }
 }
 
