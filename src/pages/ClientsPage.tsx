@@ -76,12 +76,14 @@ const HIDE_KEY = 'miraflores-workpaper:start-here-hidden'
 /** For a first-time visitor: what this is and a five-minute path through it. Hiding it is remembered per browser. */
 function StartHere({ onOpen }: { onOpen: () => void }) {
   const loadDemo = useLoadDemo()
+  // One way in: a first visit gets the sample work; once there is work in this browser, never overwrite it.
+  const fresh = useApp((s) => s.events.length === 0)
   const [hidden, setHidden] = useState(() => { try { return localStorage.getItem(HIDE_KEY) === '1' } catch { return false } })
   if (hidden) return null
   const hide = () => { setHidden(true); try { localStorage.setItem(HIDE_KEY, '1') } catch { /* private mode: hidden for this visit */ } }
   const steps: [string, string, string][] = [
-    ['play', 'Load sample work', 'See a return halfway through review, as Daniel the reviewer. Or skip it and start from the beginning.'],
-    ['route', 'Open the client', 'The map shows the return from income to what is owed, with problems where they hit. Click any number to see where it came from.'],
+    ['play', 'Start with sample work', 'The button below opens a return halfway through review, with you as Daniel the reviewer. Start over any time from the reset icon at top right.'],
+    ['route', 'Read the map', 'The map shows the return from income to what is owed, with problems where they hit. Click any number to see where it came from.'],
     ['users', 'Switch people', 'Use the menu at top right to work as a preparer, reviewer, partner, new hire or the client. Anything you cannot do is greyed out, with the reason.'],
     ['clock', 'Change the date', 'Use the date at the top to move through tax season: new documents arrive, the return is filed, and letters come back from the IRS.'],
     ['sparkle', 'Ask Mira', 'Ask questions in plain English. Mira answers from this client\'s file and shows where each answer came from. Replies can take up to a minute.'],
@@ -104,8 +106,9 @@ function StartHere({ onOpen }: { onOpen: () => void }) {
         ))}
       </ol>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Btn size="sm" variant="primary" onClick={() => { void loadDemo().then(onOpen) }}><Icon name="play" size={13} />Load sample work and open</Btn>
-        <Btn size="sm" onClick={onOpen}><Icon name="arrow-right" size={13} />Open the client</Btn>
+        {fresh
+          ? <Btn size="sm" variant="primary" onClick={() => { void loadDemo().then(onOpen) }}><Icon name="play" size={13} />Start the tour</Btn>
+          : <Btn size="sm" variant="primary" onClick={onOpen}><Icon name="arrow-right" size={13} />Continue to the client</Btn>}
       </div>
     </Card>
   )
