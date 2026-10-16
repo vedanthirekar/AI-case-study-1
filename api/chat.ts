@@ -7,9 +7,9 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 
 export const maxDuration = 60
 
-const openrouter = process.env.OPENROUTER_API_KEY
-  ? createOpenAICompatible({ name: 'openrouter', baseURL: 'https://openrouter.ai/api/v1', apiKey: process.env.OPENROUTER_API_KEY })
-  : null
+// Keys pasted through some shells arrive with a byte-order mark or a newline; strip both.
+const KEY = process.env.OPENROUTER_API_KEY?.replace(/[﻿\s]/g, '')
+const openrouter = KEY ? createOpenAICompatible({ name: 'openrouter', baseURL: 'https://openrouter.ai/api/v1', apiKey: KEY }) : null
 // Free models share rate-limited pools (Gemma 4's is often exhausted); OpenRouter moves to the
 // next model in the list when one is throttled. Set ASSISTANT_MODEL to change the first choice.
 const MODEL_ID = process.env.ASSISTANT_MODEL || (openrouter ? 'nvidia/nemotron-3-super-120b-a12b:free' : 'anthropic/claude-sonnet-5')
