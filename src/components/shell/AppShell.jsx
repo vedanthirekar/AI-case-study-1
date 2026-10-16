@@ -13,7 +13,7 @@ import { Icon } from '../ui'
 import { useShell } from './ShellContext'
 import Sidebar from './Sidebar'
 
-export default function AppShell({ brand, nav = [], secondaryNav = [], sidebarBadge, sidebarFooter, topRight, railWidth = 288 }) {
+export default function AppShell({ brand, nav = [], secondaryNav = [], sidebarBadge, sidebarFooter, topRight, railWidth = 288, dock }) {
   const { crumbs, rail } = useShell()
   const loc = useLocation()
   const [collapsed, setCollapsed] = useState(false)
@@ -44,6 +44,7 @@ export default function AppShell({ brand, nav = [], secondaryNav = [], sidebarBa
               {rail}
             </aside>
           )}
+          {dock}
         </div>
       </div>
     </div>

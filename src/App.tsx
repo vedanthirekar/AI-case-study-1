@@ -1,8 +1,8 @@
 // Routes and navigation. The firm sees its clients; opening one gives the client
 // file: Return map, Review, Documents, Schedules, Filing. Clients see only their portal.
-import { useEffect, lazy, Suspense, type ReactNode } from 'react'
+import { useEffect, useState, lazy, Suspense, type ReactNode } from 'react'
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
-import AppShell from './components/shell/AppShell'
+import AppShell, { TopBarButton } from './components/shell/AppShell'
 import { EmptyState, Icon, SkeletonRows } from './components/ui'
 import { useApp, useActor } from './state/app'
 import { C, FIRM } from './lib/paths'
@@ -15,9 +15,12 @@ import FirmPage from './pages/FirmPage'
 import { RoleSwitcher, SeasonClock, GlobalSearch, DemoMenu } from './features/shell/TopBar'
 import { NotificationBell } from './features/shell/Notifications'
 import { useFindings } from './features/findings'
+import { useAssistant } from './features/assistant/store'
 
 // The graph library is only downloaded when a client file is opened.
 const MapPage = lazy(() => import('./pages/MapPage'))
+// The assistant (and the AI SDK) loads the first time it is opened.
+const AssistantPanel = lazy(() => import('./features/assistant/AssistantPanel'))
 const Loading = () => <div className="p-6"><SkeletonRows rows={4} /></div>
 
 export default function App() {
@@ -55,12 +58,12 @@ function Ready() {
   const me = useActor()
   const loc = useLocation()
   const open = useFindings().filter((f) => f.status === 'open').length
-  const tools = <>{me.role !== 'client' && <GlobalSearch />}<SeasonClock /><NotificationBell /><RoleSwitcher /><DemoMenu /></>
+  const tools = <>{me.role !== 'client' && <GlobalSearch />}<AskButton /><SeasonClock /><NotificationBell /><RoleSwitcher /><DemoMenu /></>
 
   if (me.role === 'client') {
     return (
       <Routes>
-        <Route element={<AppShell brand={{ mark: 'M', name: 'Miraflores' }} nav={[{ to: FIRM.portal, label: 'My 2025 return', icon: 'home', end: true }, { to: '/portal/copy', label: 'My copy', icon: 'doc' }]} topRight={tools} />}>
+        <Route element={<AppShell brand={{ mark: 'M', name: 'Miraflores' }} nav={[{ to: FIRM.portal, label: 'My 2025 return', icon: 'home', end: true }, { to: '/portal/copy', label: 'My copy', icon: 'doc' }]} topRight={tools} dock={<Dock key={me.id} />} />}>
           <Route path="/portal" element={<ClientPortal />} />
           <Route path="/portal/copy" element={<ClientCopy />} />
           <Route path="*" element={<Navigate to={FIRM.portal} replace />} />
@@ -88,7 +91,7 @@ function Ready() {
 
   return (
     <Routes>
-      <Route element={<AppShell brand={{ mark: 'M', name: 'Miraflores' }} nav={nav} secondaryNav={secondary} sidebarBadge={inClient ? <ClientBadge /> : undefined} topRight={tools} />}>
+      <Route element={<AppShell brand={{ mark: 'M', name: 'Miraflores' }} nav={nav} secondaryNav={secondary} sidebarBadge={inClient ? <ClientBadge /> : undefined} topRight={tools} dock={<Dock key={me.id} />} />}>
         <Route path="/" element={<ClientsPage />} />
         <Route path="/firm" element={<FirmPage />} />
         <Route path="/clients/:cid">
@@ -108,4 +111,17 @@ function Ready() {
       </Route>
     </Routes>
   )
+}
+
+function AskButton() {
+  const toggle = useAssistant((s) => s.toggle)
+  return <TopBarButton icon="sparkle" label="Ask the workpaper" onClick={toggle} />
+}
+
+/** Mounted from the first open on, so the conversation survives closing the panel. */
+function Dock() {
+  const open = useAssistant((s) => s.open)
+  const [loaded, setLoaded] = useState(open)
+  useEffect(() => { if (open) setLoaded(true) }, [open])
+  return loaded ? <Suspense fallback={null}><AssistantPanel /></Suspense> : null
 }
