@@ -22,6 +22,7 @@ import { usePeople } from '../features/people'
 import { ThreadList, AskForm } from '../features/Threads'
 import { Activity, Compare, WhatIfs } from './ChangesPage'
 import { traceHref } from '../lib/paths'
+import { DecisionForm, decisionKindFor } from '../features/Decisions'
 
 type StatusFilter = 'open' | 'all' | 'done'
 
@@ -162,8 +163,7 @@ export function FindingDetail({ f, onClose }: { f: ReviewedFinding; onClose: () 
   const nav = useNavigate()
   const [doc, setDoc] = useState<{ id: string; page: number; ev?: string } | null>(null)
   const [reason, setReason] = useState('')
-  const [authority, setAuthority] = useState('')
-  const [choice, setChoice] = useState('Keep the engine treatment')
+  const decision = decisionKindFor(f)
   useEffect(() => { setDoc(null) }, [f.id])
   const adjs = d.adjustments.filter((a) => f.adjustmentIds.includes(a.id))
   const quotes = f.evidence.filter((e) => /^(qa|msg|call)-/.test(e))
@@ -239,21 +239,13 @@ export function FindingDetail({ f, onClose }: { f: ReviewedFinding; onClose: () 
 
         {f.status === 'open' && (
           <section className="space-y-3 border-t border-line pt-3">
-            {f.severity === 'judgment' && (
+            {decision && (
               <div className="space-y-2">
                 <Head>Record the decision</Head>
-                <select value={choice} onChange={(e) => setChoice(e.target.value)} className="w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-body">
-                  <option>Keep the engine treatment</option><option>Use the alternative</option><option>Raised with the client</option>
-                </select>
-                <input value={authority} onChange={(e) => setAuthority(e.target.value)} placeholder="Authority relied on (e.g. Treas. Reg. 1.263(a)-3)"
-                  className="w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-body placeholder:text-faint" />
-                <ActionButton size="sm" variant="primary" done="Decision recorded"
-                  actions={{ type: 'decision.recorded', refs: [`finding:${f.id}`, ...f.lines.slice(0, 3)], payload: { kind: 'judgment', topic: f.id, choice, authority, rationale: f.title } }}>
-                  <Icon name="scale" size={13} />Record decision
-                </ActionButton>
+                <DecisionForm key={f.id} kind={decision} topic={f.id} rationale={f.title} fixedTopic refs={[`finding:${f.id}`, ...f.lines.slice(0, 3)]} />
               </div>
             )}
-            {f.proposals.length === 0 && f.severity !== 'judgment' && (
+            {f.proposals.length === 0 && !decision && (
               <ActionButton size="sm" variant="good" done="Marked as handled"
                 actions={{ type: 'verification.recorded', refs: [`finding:${f.id}`], payload: { method: 'confirmed_with_client', note: f.title } }}>
                 <Icon name="check" size={13} />Mark handled

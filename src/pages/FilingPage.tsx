@@ -24,6 +24,7 @@ import { usePeople } from '../features/people'
 import { LV } from '../features/areas/common'
 import { Attachments } from '../features/Attachments'
 import { filingHref, reviewHref } from '../lib/paths'
+import { DecisionForm, DecisionList } from '../features/Decisions'
 
 /** Federal and California totals as the workpaper stands (engine + estimated adjustments). */
 export function useFinalFigures() {
@@ -124,6 +125,18 @@ export default function FilingPage() {
           </Card>
         </div>
       </div>
+
+      <Card>
+        <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
+          <h2 className="font-display text-title font-bold">Decisions on record</h2>
+          <span className="text-micro text-muted">Judgment calls, elections, due diligence and penalty decisions, each with its authority</span>
+        </div>
+        <DecisionList />
+        <div className="grid gap-3 border-t border-line px-4 py-3 lg:grid-cols-[1fr_1.4fr]">
+          <p className="text-meta text-muted">Decisions about a specific issue are recorded from that issue in Review. Record others here, for example the Form 2210 underpayment penalty (engine: {fmtMoney(m.current.v.summary.federal.penalty)} federal, {fmtMoney(m.current.v.summary.california.penalty)} California) or the Form 8867 due diligence for the child tax credit.</p>
+          <DecisionForm kind="penalty" topic="" refs={['return']} />
+        </div>
+      </Card>
 
       <Card>
         <div className="border-b border-line px-4 py-2.5"><h2 className="font-display text-title font-bold">E-file and agency record</h2></div>
@@ -424,7 +437,7 @@ export function NextYear() {
       </div>
       <Card><div className="border-b border-line px-4 py-2.5"><h2 className="font-display text-title font-bold">Open items handed forward ({open.length})</h2></div>
         <ul>{open.slice(0, 20).map((f) => <li key={f.id} className="border-b border-line2 px-4 py-1.5 text-meta last:border-0">{f.title}<span className="ml-2 text-micro text-muted">{f.check}</span></li>)}</ul>
-        {d.decisions.length > 0 && <div className="border-t border-line px-4 py-2 text-micro text-muted">{d.decisions.length} recorded decisions travel with the file (see Changes).</div>}
+        {d.decisions.length > 0 && <div className="border-t border-line px-4 py-2 text-micro text-muted">{d.decisions.length} recorded decisions travel with the file (listed on Filing).</div>}
       </Card>
     </div>
   )

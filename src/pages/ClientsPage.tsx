@@ -1,16 +1,17 @@
 // The firm's home: its clients. One household in this packet; open it to work the return.
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useShell } from '../components/shell/ShellContext'
 import PageHeader from '../components/shell/PageHeader'
 import { Table, Th, Tr, Td } from '../components/Table'
-import { Avatar, Card, Tag } from '../components/ui'
+import { Avatar, Btn, Card, Icon, Tag } from '../components/ui'
 import { useApp, useDerived, useModel } from '../state/app'
 import { fmtDate, fmtMoney } from '../lib/format'
 import { C } from '../lib/paths'
 import { useFindings, isOpenIssue } from '../features/findings'
 import { readiness } from '../features/readiness'
 import { usePeople } from '../features/people'
+import { useLoadDemo } from '../features/shell/TopBar'
 
 export default function ClientsPage() {
   const m = useModel()
@@ -37,6 +38,7 @@ export default function ClientsPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-5 px-6 py-6">
       <PageHeader eyebrow={m.packet.firm.name} icon="users" title="Clients" subtitle={`Tax season ${m.taxYear} · ${fmtDate(simNow)}`} />
+      <StartHere onOpen={() => nav(C())} />
       <div className="grid gap-3 sm:grid-cols-4">
         <Stat label="Clients" value="1" />
         <Stat label="In review" value={status === 'In review' ? '1' : '0'} />
@@ -66,6 +68,46 @@ export default function ClientsPage() {
       </Card>
       
     </div>
+  )
+}
+
+const HIDE_KEY = 'miraflores-workpaper:start-here-hidden'
+
+/** For a first-time visitor: what this is and a five-minute path through it. Hiding it is remembered per browser. */
+function StartHere({ onOpen }: { onOpen: () => void }) {
+  const loadDemo = useLoadDemo()
+  const [hidden, setHidden] = useState(() => { try { return localStorage.getItem(HIDE_KEY) === '1' } catch { return false } })
+  if (hidden) return null
+  const hide = () => { setHidden(true); try { localStorage.setItem(HIDE_KEY, '1') } catch { /* private mode: hidden for this visit */ } }
+  const steps: [string, string, string][] = [
+    ['play', 'Load the mid-season demo', 'A week of review work, with you as Daniel the reviewer. Or start from the packet as delivered.'],
+    ['route', 'Open the client file', 'The return map shows where each problem lands. Hover an issue; click any box to trace that number to the exact field on its source document.'],
+    ['users', 'Switch roles (top right)', 'Act as preparer, reviewer, partner, a new hire without data clearance, or the client. Controls you cannot use stay visible and say why.'],
+    ['clock', 'Move the season clock', 'Replay the season: late and corrected documents, the e-file rejection, payments and a notice.'],
+    ['sparkle', 'Ask Mira', 'An AI assistant that answers from this file and cites its sources. It runs on a free model, so answers can take a little while.'],
+  ]
+  return (
+    <Card className="border-accent/30 bg-accent-soft/30 p-4">
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display text-title font-bold">Trying this out? Start here</h2>
+          <p className="text-meta text-muted">A working tax workpaper for one household's 2025 return, built from the packet as delivered. Everything you do is saved in this browser, and other tabs update live.</p>
+        </div>
+        <button onClick={hide} aria-label="Hide" className="text-faint hover:text-ink"><Icon name="x" size={16} /></button>
+      </div>
+      <ol className="mt-3 grid gap-2 md:grid-cols-5">
+        {steps.map(([icon, title, body], i) => (
+          <li key={title} className="rounded-lg border border-line2 bg-surface p-2.5">
+            <div className="flex items-center gap-1.5 text-meta font-semibold text-ink"><span className="tnum text-micro text-faint">{i + 1}</span><Icon name={icon} size={14} className="text-accent" />{title}</div>
+            <p className="mt-1 text-micro text-muted">{body}</p>
+          </li>
+        ))}
+      </ol>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Btn size="sm" variant="primary" onClick={() => { void loadDemo().then(onOpen) }}><Icon name="play" size={13} />Load the demo and open the file</Btn>
+        <Btn size="sm" onClick={onOpen}><Icon name="arrow-right" size={13} />Open the file as delivered</Btn>
+      </div>
+    </Card>
   )
 }
 

@@ -111,7 +111,9 @@ export function GlobalSearch() {
     for (const x of [...m.packet.client.questionnaire.map((q2) => ({ id: q2.id, t: `${q2.question} ${q2.answer}` })), ...m.packet.client.messages.map((x2) => ({ id: x2.id, t: x2.text }))]) {
       if (x.t.toLowerCase().includes(s)) out.push({ id: x.id, group: 'Client answers and messages', icon: 'chat', label: x.t.slice(0, 90), sub: x.id })
     }
-    return out
+    // A few of each kind, so a payer's name shows its documents too, not only the first fifty lines.
+    const per = new Map<string, number>()
+    return out.filter((x) => { const g = x.group ?? ''; const n = (per.get(g) ?? 0) + 1; per.set(g, n); return n <= 8 })
   }
   return (
     <>
@@ -123,21 +125,28 @@ export function GlobalSearch() {
   )
 }
 
-export function DemoMenu() {
+/** Replace this browser's workpaper with a week of mid-season review work. */
+export function useLoadDemo() {
   const resetDemo = useApp((s) => s.resetDemo)
   const appendRaw = useApp((s) => s.appendRaw)
   const setSimNow = useApp((s) => s.setSimNow)
   const setActor = useApp((s) => s.setActor)
-  const events = useApp((s) => s.events)
   const m = useModel()
-  const [confirm, setConfirm] = useState(false)
   const toast = useToast()
-  const loadDemo = async () => {
+  return async () => {
     await resetDemo()
     await appendRaw(seedEvents(m))
     setSimNow(SEED_SIM_NOW); setActor('st-02')
     toast({ title: 'Mid-season demo loaded', body: 'A week of review work. You are Daniel (reviewer) on June 26, 2026.' })
   }
+}
+
+export function DemoMenu() {
+  const resetDemo = useApp((s) => s.resetDemo)
+  const events = useApp((s) => s.events)
+  const [confirm, setConfirm] = useState(false)
+  const toast = useToast()
+  const loadDemo = useLoadDemo()
   return (
     <>
       <Menu align="right" width={260} trigger={(_open, toggle) => (
