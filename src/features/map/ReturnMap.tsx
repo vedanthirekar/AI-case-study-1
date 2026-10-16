@@ -27,7 +27,7 @@ const Card = memo(({ data }: NodeProps<Node<Data>>) => {
   const value = typeof stat.value === 'number' ? stat.value : null
   const shownLabel = node.id === 'owed' && stat.estimate != null && stat.estimate < 0 ? 'Refund (estimate)' : node.label
   return (
-    <div className={cx('rounded-md border-2 px-3 py-2 shadow-sm transition', tone, dim && 'opacity-30', lit && 'ring-4 ring-accent/40', bottom && 'border-[3px]')} style={{ width: W, minHeight: H }}>
+    <div className={cx('rounded-md border-2 px-3 py-2 shadow-sm transition', tone, dim && 'opacity-40', lit && 'ring-4 ring-accent/40', bottom && 'border-[3px]')} style={{ width: W, minHeight: H }}>
       <Handle type="target" position={Position.Left} className="!h-1.5 !w-1.5 !border-0 !bg-faint" />
       <Handle type="source" position={Position.Right} className="!h-1.5 !w-1.5 !border-0 !bg-faint" />
       <div className="flex items-center gap-1.5">

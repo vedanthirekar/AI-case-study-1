@@ -8,6 +8,7 @@ export default function FitOnResize({ padding = 0.12, maxZoom = 1.1 }: { padding
   const h = useStore((s) => s.height)
   const n = useStore((s) => s.nodeLookup.size)
   useEffect(() => {
+    if (!w || !h) return // mid-layout: a zero-size canvas would fit to nothing
     const t = setTimeout(() => { void fitView({ padding, maxZoom, duration: 200 }) }, 30)
     return () => clearTimeout(t)
   }, [w, h, n, fitView, padding, maxZoom])

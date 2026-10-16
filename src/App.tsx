@@ -3,7 +3,6 @@
 import { useEffect, lazy, Suspense, type ReactNode } from 'react'
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
 import AppShell from './components/shell/AppShell'
-import KitGallery from './KitGallery'
 import { EmptyState, Icon, SkeletonRows } from './components/ui'
 import { useApp, useActor } from './state/app'
 import { C, FIRM } from './lib/paths'
@@ -83,7 +82,7 @@ function Ready() {
   ]
   const secondary = inClient
     ? [{ to: FIRM.clients, label: 'All clients', icon: 'users', end: true }, { to: FIRM.settings, label: 'Firm settings', icon: 'shield' }]
-    : [{ to: '/kit', label: 'Component kit', icon: 'columns' }]
+    : []
   const lazyPage = (el: ReactNode) => <Suspense fallback={<Loading />}>{el}</Suspense>
   const legacy = (from: string, to: string) => <Route key={from} path={from} element={<Legacy to={to} />} />
 
@@ -92,7 +91,6 @@ function Ready() {
       <Route element={<AppShell brand={{ mark: 'M', name: 'Miraflores' }} nav={nav} secondaryNav={secondary} sidebarBadge={inClient ? <ClientBadge /> : undefined} topRight={tools} />}>
         <Route path="/" element={<ClientsPage />} />
         <Route path="/firm" element={<FirmPage />} />
-        <Route path="/kit" element={<KitGallery />} />
         <Route path="/clients/:cid">
           <Route index element={lazyPage(<MapPage />)} />
           <Route path="review" element={<ReviewPage />} />

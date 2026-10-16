@@ -37,8 +37,10 @@ export default function MapPage() {
   const steps = useMemo(() => readiness(m, d, findings, simNow), [m, d, findings, simNow])
   const open = findings.filter((f) => f.status === 'open')
   const selected = findings.find((f) => f.id === fid)
+  // Only dim the map when the issue actually lands somewhere on it.
   const lit = hover ?? fid
-  const highlight = lit && landing.get(lit) ? new Set(landing.get(lit)) : null
+  const spots = lit ? landing.get(lit) : undefined
+  const highlight = spots && spots.length ? new Set(spots) : null
   const focusNode = SPINE.find((n) => n.key === focus)
   const focusLabel = focusNode?.label ?? m.current.lines.get(focus ?? '')?.label ?? focus
 
@@ -98,8 +100,8 @@ export default function MapPage() {
         </div>
 
         {traceKey ? <TracePanel lineKey={traceKey} />
-          : selected ? <FindingDetail f={selected} onClose={() => set({ f: null })} />
-            : <Attention list={open} onPick={(f) => set({ f: f.id })} onHover={setHover} />}
+          : selected ? <FindingDetail f={selected} onClose={() => { setHover(null); set({ f: null }) }} />
+            : <Attention list={open} onPick={(f) => { setHover(null); set({ f: f.id }) }} onHover={setHover} />}
       </div>
     </div>
   )
@@ -115,6 +117,8 @@ function Fig({ label, value }: { label: string; value: number }) {
 }
 
 function Attention({ list, onPick, onHover }: { list: ReviewedFinding[]; onPick: (f: ReviewedFinding) => void; onHover: (id: string | null) => void }) {
+  // The list unmounts without a mouseleave when an item is opened: never leave a hover behind.
+  useEffect(() => () => onHover(null), [onHover])
   const ranked = list.filter((f) => f.severity !== 'info').sort((a, b) => b.rank - a.rank)
   const total = ranked.reduce((s, f) => s + magnitude(f.effect), 0)
   return (
@@ -123,7 +127,7 @@ function Attention({ list, onPick, onHover }: { list: ReviewedFinding[]; onPick:
         <h2 className="font-display text-title font-bold">Needs attention</h2>
         <p className="text-micro text-muted">{ranked.length} issues from independent checks, biggest first · about {fmtMoney(Math.round(total))} of tax at stake. Hover to see where each lands on the return.</p>
       </div>
-      <ul className="pane min-h-0 flex-1 overflow-y-auto">
+      <ul className="pane min-h-0 flex-1 overflow-y-auto" onMouseLeave={() => onHover(null)}>
         {ranked.map((f, i) => (
           <li key={f.id}>
             <button onClick={() => onPick(f)} onMouseEnter={() => onHover(f.id)} onMouseLeave={() => onHover(null)}
