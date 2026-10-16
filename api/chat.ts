@@ -7,6 +7,8 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 
 export const maxDuration = 60
 
+const MAX_ROUNDS = Number(process.env.ASSISTANT_MAX_ROUNDS) || 3
+
 // Keys pasted through some shells arrive with a byte-order mark or a newline; strip both.
 const KEY = process.env.OPENROUTER_API_KEY?.replace(/[﻿\s]/g, '')
 const openrouter = KEY ? createOpenAICompatible({ name: 'openrouter', baseURL: 'https://openrouter.ai/api/v1', apiKey: KEY }) : null
@@ -74,7 +76,7 @@ const CLIENT_TOOLS: Record<string, Tool> = {
 const RULES = `You are the workpaper assistant inside Miraflores, a tax firm's review tool. You answer questions about ONE household's 2025 federal and California return, using only the workpaper data you can see or fetch with tools.
 
 How to work:
-- Lookups are slow and limited: plan them, request all you need together in one turn, and stop after at most 2 or 3 rounds. The context below already lists every open issue, so answer ranking questions from it directly.
+- Lookups are slow and limited: plan them, request all you need together in one turn, never repeat a lookup you already have, and stop after at most 2 rounds. The context below already lists every open issue, so answer ranking questions from it directly.
 - Look things up before answering. Never guess a number, a source or a status. If the tools do not show it, say you cannot find it.
 - Never compute tax yourself. Dollar figures come from the tools. A "tax effect" is the dollar change times the engine's marginal rate: always call it an estimate.
 - The engine's values and the extracted values can be wrong; printed document text is the truth. When they disagree, say so and cite both.
@@ -93,16 +95,17 @@ export async function POST(req: Request): Promise<Response> {
   const messages = (body.messages ?? []).slice(-40)
   if (!messages.length) return new Response('No messages', { status: 400 })
   const client = body.role === 'client'
-  // Rounds of lookups already made for the current question; after three, answer with what is known.
+  // Rounds of lookups already made for the current question; after MAX_ROUNDS, answer with what is known.
   const last = messages[messages.length - 1]
   const rounds = last.role === 'assistant' ? last.parts.filter((p) => p.type === 'step-start').length : 0
+  const final = rounds >= MAX_ROUNDS
 
   const result = streamText({
     model: MODEL,
-    system: `${RULES}${client ? `\n\n${CLIENT_RULES}` : ''}\n\n# Context right now\n${String(body.context ?? '').slice(0, 24_000)}${rounds >= 3 ? '\n\n# No more lookups\nYou have used all your lookups for this question. Do not call or write out any tool call. Answer now from the results above, and say what you could not check.' : ''}`,
+    system: `${RULES}${client ? `\n\n${CLIENT_RULES}` : ''}\n\n# Context right now\n${String(body.context ?? '').slice(0, 24_000)}${final ? '\n\n# No more lookups\nYou have used all your lookups for this question. Do not call or write out any tool call. Answer now from the results above, and say what you could not check.' : ''}`,
     messages: await convertToModelMessages(messages),
-    tools: client ? CLIENT_TOOLS : STAFF_TOOLS,
-    toolChoice: rounds >= 3 ? 'none' : 'auto',
+    // On the last round the tools are withdrawn, not just disabled: some models write a call out as text otherwise.
+    tools: final ? {} : client ? CLIENT_TOOLS : STAFF_TOOLS,
     maxRetries: 2,
     maxOutputTokens: 2500,
     ...(openrouter ? { providerOptions: { openrouter: { models: [MODEL_ID, ...FALLBACKS] } } } : {}),
